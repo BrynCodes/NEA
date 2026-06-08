@@ -94,7 +94,12 @@ class PlayerSprite(py.sprite.Sprite):
     def __init__(self, walls, *groups):
         super().__init__(*groups)
         pos = 0, 0
-        self.drawSurface = py.Surface((1280, 720), py.SRCALPHA)
+        # self.drawSurface = py.Surface((1280, 720), py.SRCALPHA)
+        self.drawSurfaceOG = py.image.load('images.jpg').convert_alpha()
+        self.drawSurface = self.drawSurfaceOG.copy()
+
+
+
 
         # directory = base_path / 'Character'
         #
@@ -172,7 +177,9 @@ class PlayerSprite(py.sprite.Sprite):
         return any(valid)
 
     def lineOfSight(self, win):
-        self.drawSurface.fill(py.Color('#00000000'))
+        # self.drawSurface.fill(py.Color('#00000000'))
+        self.drawSurface = self.drawSurfaceOG.copy()
+
 
         pos = (640, 360)
         for wall in self.walls:
@@ -187,10 +194,10 @@ class PlayerSprite(py.sprite.Sprite):
                         cornerVect.scale_to_length(2000)
                         validCornersVect.insert(0, cornerVect + pos)
                     validCorners.append(corner)
-            validCorners += validCornersVect
+            validCorners += [validCornersVect[0]] + [(1280, 0), (0, 0), (0, 720), (1280, 720)] + [validCornersVect[1]]
 
             if len(validCorners) > 2:
-                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 200), validCorners)
+                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 0), validCorners)
 
         win.blit(self.drawSurface, (0, 0))
 
@@ -257,7 +264,7 @@ def main():
     wall.fill('red')
     walls = py.sprite.Group()
     CollisionTile((-128, 0), wall, walls, None)
-    CollisionTile((200, 320), wall, walls, None)
+    # CollisionTile((200, 320), wall, walls, None)
 
     allSprites = Group()
     charcter = PlayerSprite(walls)
