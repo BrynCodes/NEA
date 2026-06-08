@@ -2,12 +2,13 @@ import math
 from pathlib import Path
 
 import pygame as py
-from pygame.constants import *
 from pygame import Vector2 as vect
+from pygame.constants import *
 
 py.font.init()
 PATH = Path.cwd()
 FONT = py.font.Font('arial.ttf', 10)
+
 
 class Controller:
 
@@ -48,7 +49,7 @@ class Group(py.sprite.Group):
                 win.blit(spr.image, spr.centerScreenRect)
             else:
                 win.blit(spr.image, spr.updateScreenPos(self.offset))
-        target.lineOfsight(win)
+        target.lineOfSight(win)
 
 
 class Tile(py.sprite.Sprite):
@@ -106,8 +107,10 @@ class PlayerSprite(py.sprite.Sprite):
 
         # self.animationCount = 0
         # self.image = self.images[self.facing]['idle']
+
         self.image = py.Surface((64, 64))
         self.image.fill('blue')
+
         self.rect: py.FRect = self.image.get_frect(center=pos)
         self.hitBox = self.rect
         self.centerScreenRect = self.image.get_frect(center=(640, 360))
@@ -139,6 +142,7 @@ class PlayerSprite(py.sprite.Sprite):
     @staticmethod
     def cornerCheckOrder(wall):
         wallPos = wall.onScreenPos
+        corners = None
         if wallPos.topleft[0] >= 640 and wallPos.topleft[1] >= 360:
             corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft
         elif wallPos.topright[0] <= 640 and wallPos.topright[1] >= 360:
@@ -157,7 +161,17 @@ class PlayerSprite(py.sprite.Sprite):
             corners = wallPos.topleft, wallPos.topright, wallPos.bottomright, wallPos.bottomleft
         return corners
 
-    def lineOfsight(self, win):
+    @staticmethod
+    def onScreen(corners):
+        valid = []
+        for corner in corners:
+            if 1280 >= corner[0] >= 0 and 720 >= corner[1] >= 0:
+                valid.append(True)
+            else:
+                valid.append(False)
+        return any(valid)
+
+    def lineOfSight(self, win):
         self.drawSurface.fill(py.Color('#00000000'))
 
         pos = (640, 360)
@@ -165,24 +179,18 @@ class PlayerSprite(py.sprite.Sprite):
             corners = self.cornerCheckOrder(wall)
             validCorners = []
             validCornersVect = []
-            for corner in corners:
-                cornerVect = (vect(corner) - pos).normalize()
-                if 1280 >= corner[0] >= 0 and 720 >= corner[1] >= 0:
-                    if not wall.onScreenPos.collidepoint(vect(corner) + cornerVect):
-                        if not wall.onScreenPos.collidepoint(vect(corner) - cornerVect) or cornerVect.y == 0 or cornerVect.x == 0:
-                            cornerVect.scale_to_length(2000)
-                            validCornersVect.insert(0, cornerVect + pos)
-                        validCorners.append(corner)
+            if self.onScreen(corners):
+                for corner in corners:
+                    cornerVect = (vect(corner) - pos).normalize()
+                    if not wall.onScreenPos.collidepoint(
+                            vect(corner) - cornerVect) or cornerVect.y == 0 or cornerVect.x == 0:
+                        cornerVect.scale_to_length(2000)
+                        validCornersVect.insert(0, cornerVect + pos)
+                    validCorners.append(corner)
             validCorners += validCornersVect
 
             if len(validCorners) > 2:
                 py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 200), validCorners)
-            # elif len(validCorners) == 2:
-            #     py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 200), validCorners + [wall.onScreenPos.bottomright])
-
-            # for i, corner in enumerate(validCorners, 1):
-            #     py.draw.circle(self.drawSurface, 'White', corner, 10)
-            #     self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
 
         win.blit(self.drawSurface, (0, 0))
 
@@ -268,7 +276,7 @@ def main():
         allSprites.update(dt)
         allSprites.cDraw(win, charcter)
 
-        blur.update(win)
+        # blur.update(win)
 
         py.display.update()
 
