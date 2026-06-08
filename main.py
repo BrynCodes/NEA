@@ -9,7 +9,6 @@ py.font.init()
 PATH = Path.cwd()
 FONT = py.font.Font('arial.ttf', 10)
 
-ggggg
 class Controller:
 
     def __init__(self):
