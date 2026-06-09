@@ -148,15 +148,16 @@ class PlayerSprite(py.sprite.Sprite):
         if wallPos.topleft[0] >= 640 and wallPos.topleft[1] >= 360:
             corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft
         elif wallPos.topright[0] <= 640 and wallPos.topright[1] >= 360:
-            corners = wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
+            corners = wallPos.bottomright, wallPos.bottomleft, wallPos.topleft
         elif wallPos.bottomleft[0] >= 640 and wallPos.bottomleft[1] <= 360:
             corners = wallPos.topleft, wallPos.topright, wallPos.bottomright
         elif wallPos.bottomright[0] <= 640 and wallPos.bottomright[1] <= 360:
-            corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft
+            corners = wallPos.bottomleft, wallPos.topleft, wallPos.topright
         elif wallPos.top >= 360:
             corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft, wallPos.topleft
         elif wallPos.right <= 640:
-            corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
+            # corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
+            corners = wallPos.bottomright, wallPos.bottomleft, wallPos.topleft, wallPos.topright
         elif wallPos.bottom <= 360:
             corners = wallPos.bottomleft, wallPos.topleft, wallPos.topright, wallPos.bottomright
         elif wallPos.left >= 640:
@@ -173,31 +174,34 @@ class PlayerSprite(py.sprite.Sprite):
                 valid.append(False)
         return any(valid)
 
-    def getCornersOfScreen(self, validCorners):
+    @staticmethod
+    def getCornersOfScreen(validCorners):
         screenCorners = [(0, 0), (1280, 0), (1280, 720), (0, 720)]
-        retScreenCorners = []
         bestDistance = 100000000
         for corner in screenCorners:
             distance = vect(validCorners[0]).distance_squared_to(corner)
             if distance < bestDistance:
                 bestDistance = distance
-                firstCorner  = corner
+                firstCorner = corner
 
-        retScreenCorners = screenCorners[screenCorners.index(firstCorner):]+ screenCorners[:screenCorners.index(firstCorner)]
-
+        retScreenCorners = screenCorners[screenCorners.index(firstCorner):] + screenCorners[
+            :screenCorners.index(firstCorner)]
 
         return retScreenCorners
 
     def lineOfSight(self, win):
         # self.drawSurface.fill(py.Color('#00000000'))
         self.drawSurface = self.drawSurfaceOG.copy()
-
+        x = 0
         pos = (640, 360)
         for wall in self.walls:
+
             corners = self.cornerCheckOrder(wall)
             validCorners = []
             validCornersVect = []
             if self.onScreen(corners):
+                x += 1
+                print(x)
                 for corner in corners:
                     cornerVect = (vect(corner) - pos).normalize()
                     if not wall.onScreenPos.collidepoint(
@@ -205,10 +209,12 @@ class PlayerSprite(py.sprite.Sprite):
                         cornerVect.scale_to_length(2000)
                         validCornersVect.insert(0, cornerVect + pos)
                     validCorners.append(corner)
-            validCorners += [validCornersVect[0]] + self.getCornersOfScreen(validCornersVect) + [validCornersVect[1]]
 
             if len(validCorners) > 2:
+                validCorners += [validCornersVect[0]] + self.getCornersOfScreen(validCornersVect) + [
+                    validCornersVect[1]]
                 py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 0), validCorners)
+
             for i, corner in enumerate(validCorners, 1):
                 py.draw.circle(self.drawSurface, 'White', corner, 10)
                 self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
@@ -237,7 +243,7 @@ class PlayerSprite(py.sprite.Sprite):
         self.direction = inputDir
 
     def walk(self):
-        speed = 600  # 300
+        speed = 300  # 300
         self.input()
         self.rect.centerx += self.direction.x * speed * self.dt
         self.hitBox.centerx = self.rect.centerx
@@ -277,8 +283,8 @@ def main():
     wall = py.Surface((64, 128))
     wall.fill('red')
     walls = py.sprite.Group()
-    CollisionTile((-128, 0), wall, walls, None)
-    # CollisionTile((200, 320), wall, walls, None)
+    CollisionTile((-64, 32), wall, walls, None)
+    CollisionTile((200, 320), wall, walls, None)
 
     allSprites = Group()
     charcter = PlayerSprite(walls)
