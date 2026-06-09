@@ -98,9 +98,6 @@ class PlayerSprite(py.sprite.Sprite):
         self.drawSurfaceOG = py.image.load('images.jpg').convert_alpha()
         self.drawSurface = self.drawSurfaceOG.copy()
 
-
-
-
         # directory = base_path / 'Character'
         #
         # self.images = {'front': dict(), 'left': dict(), 'right': dict(), 'back': dict()}
@@ -176,10 +173,24 @@ class PlayerSprite(py.sprite.Sprite):
                 valid.append(False)
         return any(valid)
 
+    def getCornersOfScreen(self, validCorners):
+        screenCorners = [(0, 0), (1280, 0), (1280, 720), (0, 720)]
+        retScreenCorners = []
+        bestDistance = 100000000
+        for corner in screenCorners:
+            distance = vect(validCorners[0]).distance_squared_to(corner)
+            if distance < bestDistance:
+                bestDistance = distance
+                firstCorner  = corner
+
+        retScreenCorners = screenCorners[screenCorners.index(firstCorner):]+ screenCorners[:screenCorners.index(firstCorner)]
+
+
+        return retScreenCorners
+
     def lineOfSight(self, win):
         # self.drawSurface.fill(py.Color('#00000000'))
         self.drawSurface = self.drawSurfaceOG.copy()
-
 
         pos = (640, 360)
         for wall in self.walls:
@@ -194,10 +205,13 @@ class PlayerSprite(py.sprite.Sprite):
                         cornerVect.scale_to_length(2000)
                         validCornersVect.insert(0, cornerVect + pos)
                     validCorners.append(corner)
-            validCorners += [validCornersVect[0]] + [(1280, 0), (0, 0), (0, 720), (1280, 720)] + [validCornersVect[1]]
+            validCorners += [validCornersVect[0]] + self.getCornersOfScreen(validCornersVect) + [validCornersVect[1]]
 
             if len(validCorners) > 2:
                 py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 0), validCorners)
+            for i, corner in enumerate(validCorners, 1):
+                py.draw.circle(self.drawSurface, 'White', corner, 10)
+                self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
 
         win.blit(self.drawSurface, (0, 0))
 
