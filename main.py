@@ -72,78 +72,12 @@ class CollisionTile(Tile):
 
     def __init__(self, pos, image, group, properties, overlapOffset=0, xhitBox=1, yhitBox=1):
         super().__init__(pos, image, group, properties, overlapOffset)
-        self.hitbox = self.rect
-
-
-class BackgroundBlur:
-
-    def __init__(self):
-        self.circleBlurOG = py.image.load(PATH / 'unseeable.png').convert_alpha()
-        self.circleBlurOG.set_alpha(200)
-
-    def update(self, win):
-        mousePos = py.mouse.get_pos()
-        angle = math.degrees(math.atan2(-(mousePos[1] - 360), mousePos[0] - 640)) - 45
-        blur = py.transform.rotate(self.circleBlurOG, angle)
-        blurRect = blur.get_frect(center=(640, 360))
-        win.blit(blur, blurRect)
-
-
-class PlayerSprite(py.sprite.Sprite):
-
-    def __init__(self, walls, *groups):
-        super().__init__(*groups)
-        pos = 0, 0
-        # self.drawSurface = py.Surface((1280, 720), py.SRCALPHA)
         self.drawSurfaceOG = py.image.load('images.jpg').convert_alpha()
         self.drawSurface = self.drawSurfaceOG.copy()
+        self.hitbox = self.rect
 
-        # directory = base_path / 'Character'
-        #
-        # self.images = {'front': dict(), 'left': dict(), 'right': dict(), 'back': dict()}
-        # for file, type, i in zip(listdir(directory), cycle((1, 'idle', 2)), range(12)):
-        #     self.images[tuple(self.images.keys())[i // 3]].update(
-        #         {type: py.transform.scale_by(py.image.load(f'{directory}/{file}').convert_alpha(), 2)})
-
-        self.facing = 'front'
-
-        # self.animationCount = 0
-        # self.image = self.images[self.facing]['idle']
-
-        self.image = py.Surface((64, 64))
-        self.image.fill('blue')
-
-        self.rect: py.FRect = self.image.get_frect(center=pos)
-        self.hitBox = self.rect
-        self.centerScreenRect = self.image.get_frect(center=(640, 360))
-
-        self.direction = vect((0, 0))
-        self.walls = walls
-        self.cooldown = 0
-        self.dt = None
-        self.ySort = self.rect.centery
-
-        # self.audioMixer = audioMixer
-
-    def collisionCheck(self, axis):
-        for wall in py.sprite.spritecollide(self, self.walls, False):
-            if wall.hitbox.colliderect(self.hitBox):
-                if axis == 'x':
-                    if self.direction.x > 0:
-                        self.hitBox.right = wall.hitbox.left
-                    elif self.direction.x < 0:
-                        self.hitBox.left = wall.hitbox.right
-                    self.rect.centerx = self.hitBox.centerx
-                elif axis == 'y':
-                    if self.direction.y > 0:
-                        self.hitBox.bottom = wall.hitbox.top
-                    elif self.direction.y < 0:
-                        self.hitBox.top = wall.hitbox.bottom
-                    self.rect.centery = self.hitBox.centery
-
-    @staticmethod
-    def cornerCheckOrder(wall):
-        wallPos = wall.onScreenPos
+    def cornerCheckOrder(self):
+        wallPos = self.onScreenPos
         corners = None
         if wallPos.topleft[0] >= 640 and wallPos.topleft[1] >= 360:
             corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft
@@ -190,36 +124,102 @@ class PlayerSprite(py.sprite.Sprite):
         return retScreenCorners
 
     def lineOfSight(self, win):
-        # self.drawSurface.fill(py.Color('#00000000'))
-        self.drawSurface = self.drawSurfaceOG.copy()
-        x = 0
         pos = (640, 360)
-        for wall in self.walls:
+        self.drawSurface = self.drawSurfaceOG.copy()
 
-            corners = self.cornerCheckOrder(wall)
-            validCorners = []
-            validCornersVect = []
-            if self.onScreen(corners):
-                x += 1
-                print(x)
-                for corner in corners:
-                    cornerVect = (vect(corner) - pos).normalize()
-                    if not wall.onScreenPos.collidepoint(
-                            vect(corner) - cornerVect) or cornerVect.y == 0 or cornerVect.x == 0:
-                        cornerVect.scale_to_length(2000)
-                        validCornersVect.insert(0, cornerVect + pos)
-                    validCorners.append(corner)
+        corners = self.cornerCheckOrder()
+        validCorners = []
+        validCornersVect = []
+        if self.onScreen(corners):
+            for corner in corners:
+                cornerVect = (vect(corner) - pos).normalize()
+                if not self.onScreenPos.collidepoint(
+                        vect(corner) - cornerVect) or cornerVect.y == 0 or cornerVect.x == 0:
+                    cornerVect.scale_to_length(2000)
+                    validCornersVect.insert(0, cornerVect + pos)
+                validCorners.append(corner)
 
-            if len(validCorners) > 2:
-                validCorners += [validCornersVect[0]] + self.getCornersOfScreen(validCornersVect) + [
-                    validCornersVect[1]]
-                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 0), validCorners)
+        if len(validCorners) > 2:
+            validCorners += [validCornersVect[0]] + self.getCornersOfScreen(validCornersVect) + [
+                validCornersVect[1]]
+            py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 0), validCorners)
 
             for i, corner in enumerate(validCorners, 1):
+                # print(f'wall {x}    corner {i}')
                 py.draw.circle(self.drawSurface, 'White', corner, 10)
                 self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
 
-        win.blit(self.drawSurface, (0, 0))
+            win.blit(self.drawSurface, (0, 0))
+
+
+class BackgroundBlur:
+
+    def __init__(self):
+        self.circleBlurOG = py.image.load(PATH / 'unseeable.png').convert_alpha()
+        self.circleBlurOG.set_alpha(200)
+
+    def update(self, win):
+        mousePos = py.mouse.get_pos()
+        angle = math.degrees(math.atan2(-(mousePos[1] - 360), mousePos[0] - 640)) - 45
+        blur = py.transform.rotate(self.circleBlurOG, angle)
+        blurRect = blur.get_frect(center=(640, 360))
+        win.blit(blur, blurRect)
+
+
+class PlayerSprite(py.sprite.Sprite):
+
+    def __init__(self, walls, *groups):
+        super().__init__(*groups)
+        pos = 0, 0
+        # self.drawSurface = py.Surface((1280, 720), py.SRCALPHA)
+
+        # directory = base_path / 'Character'
+        #
+        # self.images = {'front': dict(), 'left': dict(), 'right': dict(), 'back': dict()}
+        # for file, type, i in zip(listdir(directory), cycle((1, 'idle', 2)), range(12)):
+        #     self.images[tuple(self.images.keys())[i // 3]].update(
+        #         {type: py.transform.scale_by(py.image.load(f'{directory}/{file}').convert_alpha(), 2)})
+
+        self.facing = 'front'
+
+        # self.animationCount = 0
+        # self.image = self.images[self.facing]['idle']
+
+        self.image = py.Surface((64, 64))
+        self.image.fill('blue')
+
+        self.rect: py.FRect = self.image.get_frect(center=pos)
+        self.hitBox = self.rect
+        self.centerScreenRect = self.image.get_frect(center=(640, 360))
+
+        self.direction = vect((0, 0))
+        self.walls = walls
+        self.cooldown = 0
+        self.dt = None
+        self.ySort = self.rect.centery
+
+        # self.audioMixer = audioMixer
+
+    def collisionCheck(self, axis):
+        for wall in py.sprite.spritecollide(self, self.walls, False):
+            if wall.hitbox.colliderect(self.hitBox):
+                if axis == 'x':
+                    if self.direction.x > 0:
+                        self.hitBox.right = wall.hitbox.left
+                    elif self.direction.x < 0:
+                        self.hitBox.left = wall.hitbox.right
+                    self.rect.centerx = self.hitBox.centerx
+                elif axis == 'y':
+                    if self.direction.y > 0:
+                        self.hitBox.bottom = wall.hitbox.top
+                    elif self.direction.y < 0:
+                        self.hitBox.top = wall.hitbox.bottom
+                    self.rect.centery = self.hitBox.centery
+
+    def lineOfSight(self, win):
+        # self.drawSurface.fill(py.Color('#00000000'))
+        for wall in self.walls:
+            wall.lineOfSight(win)
 
     def input(self):
         keys = py.key.get_pressed()
@@ -284,7 +284,12 @@ def main():
     wall.fill('red')
     walls = py.sprite.Group()
     CollisionTile((-64, 32), wall, walls, None)
-    CollisionTile((200, 320), wall, walls, None)
+    # CollisionTile((100, -73), wall, walls, None)
+    # CollisionTile((200, -312), wall, walls, None)
+    # CollisionTile((324, 89), wall, walls, None)
+    # CollisionTile((89, 320), wall, walls, None)
+    # CollisionTile((200, 320), wall, walls, None)
+
 
     allSprites = Group()
     charcter = PlayerSprite(walls)
@@ -303,10 +308,11 @@ def main():
         allSprites.update(dt)
         allSprites.cDraw(win, charcter)
 
+
         # blur.update(win)
 
         py.display.update()
-
+        py.display.set_caption(f'{rr.get_fps():2f}')
 
 if __name__ == '__main__':
     py.init()
