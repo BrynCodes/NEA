@@ -110,7 +110,7 @@ class CollisionTile(Tile):
 
     @staticmethod
     def getCornersOfScreen(validCorners):
-        screenCorners = [(0, 0), (1280, 0), (1280, 720), (0, 720)]
+        screenCorners = [(-1, -1), (1281, -1), (1281, 721), (-1, 721)]
         bestDistance = 100000000
         for corner in screenCorners:
             distance = vect(validCorners[0]).distance_squared_to(corner)
