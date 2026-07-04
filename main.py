@@ -73,6 +73,8 @@ class CollisionTile(Tile):
     def __init__(self, pos, image, group, properties, overlapOffset=0, xhitBox=1, yhitBox=1):
         super().__init__(pos, image, group, properties, overlapOffset)
         self.drawSurfaceOG = py.image.load('images.jpg').convert_alpha()
+        self.drawSurfaceOG = py.Surface((1280, 720), SRCALPHA)
+        self.drawSurfaceOG.fill((0, 0, 0, 200))
         self.drawSurface = self.drawSurfaceOG.copy()
         self.hitbox = self.rect
 
@@ -281,14 +283,16 @@ def main():
     running = True
 
     wall = py.Surface((64, 128))
+    wall2 = py.Surface((128, 64))
     wall.fill('red')
+    wall2.fill('red')
     walls = py.sprite.Group()
-    CollisionTile((-64, 32), wall, walls, None)
-    # CollisionTile((100, -73), wall, walls, None)
-    # CollisionTile((200, -312), wall, walls, None)
-    # CollisionTile((324, 89), wall, walls, None)
-    # CollisionTile((89, 320), wall, walls, None)
-    # CollisionTile((200, 320), wall, walls, None)
+    CollisionTile((-64, 32), wall2, walls, None)
+    CollisionTile((100, -73), wall, walls, None)
+    CollisionTile((200, -312), wall, walls, None)
+    CollisionTile((324, 89), wall2, walls, None)
+    CollisionTile((89, 320), wall, walls, None)
+    CollisionTile((200, 320), wall, walls, None)
 
 
     allSprites = Group()
