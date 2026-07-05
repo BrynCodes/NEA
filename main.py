@@ -190,7 +190,8 @@ class PlayerSprite(py.sprite.Sprite):
 
                         gradient = (line[0][1] - line[1][1]) / (line[0][0] - line[1][1])
                         if not i:
-                            # points += [vect[]]
+                            points.insert(1, vect(tile.onScreenPos.w, tile.onScreenPos.h))
+                            points.insert(1, vect(0, tile.onScreenPos.h))
                             for j, corner in enumerate((tile.onScreenPos.topleft, tile.onScreenPos.topright)):
                                 if corner[1] - line[0][1] < gradient * (corner[0] - line[0][0]):
                                     py.draw.circle(self.drawSurface, 'white', corner, 2)
@@ -200,7 +201,7 @@ class PlayerSprite(py.sprite.Sprite):
                                     # else:
                                     #     points.append(vect(0,0))
                                     #     break
-                            # py.draw.polygon(tile.image, (0,0,0,0), points)
+                            py.draw.polygon(tile.image, (0, 0, 0, 0), points)
                         else:
                             print('top')
 
