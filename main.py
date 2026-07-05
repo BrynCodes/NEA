@@ -54,24 +54,28 @@ class Group(py.sprite.Group):
 
 class Tile(py.sprite.Sprite):
 
-    def __init__(self, pos, image, group, properties=None, overlapOffset=0):
-        super().__init__(group)
+    def __init__(self, pos, image, *groups, **extra):
+        super().__init__(*groups)
+        self.ogImage = image.copy()
         self.image = image
-        self.properties = properties
+        self.properties = extra.setdefault('properties', None)
         self.rect = self.image.get_frect(topleft=pos)
         self.hitbox = self.rect.copy()
-        self.ySort = self.rect.centery - overlapOffset
+        self.ySort = self.rect.centery - extra.setdefault('overlapOffset', 0)
         self.onScreenPos = self.image.get_frect(topleft=pos)
+
 
     def updateScreenPos(self, offset):
         self.onScreenPos.topleft = self.rect.topleft - offset
         return self.onScreenPos
 
-
 class CollisionTile(Tile):
 
-    def __init__(self, pos, image, group, properties, overlapOffset=0, xhitBox=1, yhitBox=1):
-        super().__init__(pos, image, group, properties, overlapOffset)
+    def __init__(self, pos, image, *groups, **extra):
+        super().__init__(pos, image, *groups, **extra)
+        xhitBox = extra.setdefault('xHitBox', 0)
+        yhitBox = extra.setdefault('yHitBox', 0)
+
         self.hitbox = self.rect
 
 
@@ -91,8 +95,9 @@ class BackgroundBlur:
 
 class PlayerSprite(py.sprite.Sprite):
 
-    def __init__(self, walls, *groups):
+    def __init__(self, walls, seeables, unseeables, *groups):
         super().__init__(*groups)
+
         pos = 0, 0
         self.drawSurface = py.Surface((1280, 720), py.SRCALPHA)
 
@@ -117,6 +122,8 @@ class PlayerSprite(py.sprite.Sprite):
 
         self.direction = vect((0, 0))
         self.walls = walls
+        self.unseeables = unseeables
+        self.seeables = seeables
         self.cooldown = 0
         self.dt = None
         self.ySort = self.rect.centery
@@ -171,14 +178,27 @@ class PlayerSprite(py.sprite.Sprite):
                 valid.append(False)
         return any(valid)
 
+    def blockUnseeables(self, lines):
+        for tile in self.unseeables:
+            tile.image = tile.ogImage.copy()
+            for line in lines:
+                clippedLine = tile.onScreenPos.clipline(line)
+                if clippedLine:
+                    point1 = vect(clippedLine[0]) - vect(tile.onScreenPos.topleft)
+                    point2 = vect(clippedLine[1]) - vect(tile.onScreenPos.topleft)
+
+                    py.draw.line(tile.image, 'white', point1, point2, 5)
+            
+
     def lineOfSight(self, win):
         self.drawSurface.fill(py.Color('#00000000'))
 
         pos = (640, 360)
-        for wall in self.walls:
+        for wall in self.seeables:
             corners = self.cornerCheckOrder(wall)
             validCorners = []
             validCornersVect = []
+            shadowCorner = []
             if self.onScreen(corners):
                 for corner in corners:
                     cornerVect = (vect(corner) - pos).normalize()
@@ -186,11 +206,14 @@ class PlayerSprite(py.sprite.Sprite):
                             vect(corner) - cornerVect) or cornerVect.y == 0 or cornerVect.x == 0:
                         cornerVect.scale_to_length(2000)
                         validCornersVect.insert(0, cornerVect + pos)
+                        shadowCorner.append(vect(corner))
                     validCorners.append(corner)
             validCorners += validCornersVect
 
             if len(validCorners) > 2:
                 py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 200), validCorners)
+
+            self.blockUnseeables(zip(shadowCorner, reversed(validCornersVect)))
 
         win.blit(self.drawSurface, (0, 0))
 
@@ -253,14 +276,26 @@ def main():
     rr = py.time.Clock()
     running = True
 
-    wall = py.Surface((64, 128))
+    wall = py.Surface((64, 128), SRCALPHA)
+    wall2 = py.Surface((128, 64), SRCALPHA)
+    x = wall.copy()
+    x.fill('black')
     wall.fill('red')
+    wall2.fill('red')
     walls = py.sprite.Group()
-    CollisionTile((-128, 0), wall, walls, None)
-    CollisionTile((200, 320), wall, walls, None)
+    seeables = py.sprite.Group()
+    unseeables = py.sprite.Group()
+    CollisionTile((-64, 32), wall2, walls, seeables)
+    CollisionTile((100, -73), wall, walls, seeables)
+    CollisionTile((200, -312), x, walls, unseeables)
+    CollisionTile((324, 89), wall2, walls)
+    CollisionTile((89, 320), wall, walls)
+    CollisionTile((200, 320), wall, walls)
+
+
 
     allSprites = Group()
-    charcter = PlayerSprite(walls)
+    charcter = PlayerSprite(walls, seeables, unseeables)
 
     allSprites.add(charcter, walls)
     allSprites.addBg(py.sprite.Group())

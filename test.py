@@ -1,5 +1,9 @@
-import pygame as py
+car = {
+    "brand": "Ford",
+    "model": "Mustang",
+    "year": 1964
+}
 
-x = py.math.Vector2(2,3)
-x.scale_to_length(1)
+x = car.setdefault("facts", "Bronco")
+
 print(x)
