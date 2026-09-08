@@ -5,6 +5,10 @@ import pygame as py
 from pygame import Vector2 as vect
 from pygame.constants import *
 
+SCREENSIZE = (1280, 720)
+CENTER = tuple(map(lambda x: x // 2, SCREENSIZE))
+
+
 py.font.init()
 PATH = Path.cwd()
 FONT = py.font.Font('arial.ttf', 10)
@@ -118,7 +122,7 @@ class PlayerSprite(py.sprite.Sprite):
 
         self.rect: py.FRect = self.image.get_frect(center=pos)
         self.hitBox = self.rect
-        self.centerScreenRect = self.image.get_frect(center=(640, 360))
+        self.centerScreenRect = self.image.get_frect(center=CENTER)
 
         self.direction = vect((0, 0))
         self.walls = walls
@@ -181,30 +185,34 @@ class PlayerSprite(py.sprite.Sprite):
     def blockUnseeables(self, linePairs):
         for tile in self.unseeables:
             tile.image = tile.ogImage.copy()
-            for lines in linePairs:
-                for i, line in enumerate(lines):
-                    clippedLine = tile.onScreenPos.clipline(line)
-                    if clippedLine:
-                        points = [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
-                                  (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
+            if self.onScreen((tile.onScreenPos.topleft, tile.onScreenPos.topright, tile.onScreenPos.bottomleft,
+                              tile.onScreenPos.bottomright)):
+                for lines in linePairs:
+                    for i, line in enumerate(lines):
+                        clippedLine = tile.onScreenPos.clipline(line)
+                        if clippedLine and clippedLine[0] != clippedLine[1]:
+                            points = [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
+                                      (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
 
-                        gradient = (points[0][1]-points[1][1])/(points[0][0]-points[1][0])
-                        if (not i and gradient > 0) or (i and gradient < 0):
-                            points.insert(1, vect(tile.onScreenPos.w, tile.onScreenPos.h))
-                            points.insert(1, vect(0, tile.onScreenPos.h))
-                            if not points[0][1]:
-                                points.insert(1,vect(0,0))
-                            if gradient < 0:
-                                points.reverse()
+                            gradient = (points[0][1] - points[1][1]) / (points[0][0] - points[1][0])
 
-                        else:
-                            if points[-1][1] == tile.onScreenPos.h:
-                                points.insert(1,vect(tile.onScreenPos.w,tile.onScreenPos.h))
-                            points.insert(1,vect(tile.onScreenPos.w,0))
-                            points.insert(1,vect(0,0))
+                            if ((not i) and gradient > 0) or (i and gradient < 0):
+                                if gradient < 0:
+                                    points.reverse()
+                                points.insert(1, vect(tile.onScreenPos.w, tile.onScreenPos.h))
+                                points.insert(1, vect(0, tile.onScreenPos.h))
+                                if not points[0][1]:
+                                    points.insert(1, vect(0, 0))
 
+                            else:
+                                if points[-1][1] == tile.onScreenPos.h:
+                                    points.insert(1, vect(tile.onScreenPos.w, tile.onScreenPos.h))
+                                points.insert(1, vect(tile.onScreenPos.w, 0))
+                                if gradient < 0:
+                                    points.reverse()
+                                points.insert(1, vect(0, 0))
 
-                        self.polygon = py.draw.polygon(tile.image, (0, 0, 0, 0), points)
+                            py.draw.polygon(tile.image, (0, 0, 0, 0), points)
 
     def lineOfSight(self, win):
         self.drawSurface.fill(py.Color('#00000000'))
@@ -228,7 +236,7 @@ class PlayerSprite(py.sprite.Sprite):
             validCorners += validCornersVect
 
             if len(validCorners) > 2:
-                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), validCorners)
+                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 200), validCorners)  # 200
 
             for i, corner in enumerate(validCorners, 1):
                 py.draw.circle(self.drawSurface, 'White', corner, 10)
@@ -294,7 +302,7 @@ class PlayerSprite(py.sprite.Sprite):
 
 
 def main():
-    win = py.display.set_mode((1280, 720))
+    win = py.display.set_mode(SCREENSIZE)
     rr = py.time.Clock()
     running = True
 
@@ -309,7 +317,7 @@ def main():
     unseeables = py.sprite.Group()
     CollisionTile((-64, 32), wall2, walls, seeables)
     # CollisionTile((100, -73), wall, walls, seeables)
-    CollisionTile((200, 125), x, walls, unseeables)
+    CollisionTile((-200, 125), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
     # CollisionTile((89, 320), wall, walls)
     # CollisionTile((200, 320), wall, walls)
