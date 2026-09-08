@@ -186,25 +186,25 @@ class PlayerSprite(py.sprite.Sprite):
                     clippedLine = tile.onScreenPos.clipline(line)
                     if clippedLine:
                         points = [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
-                                  vect(clippedLine[1]) - vect(tile.onScreenPos.topleft)]
+                                  (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
 
-                        gradient = (line[0][1] - line[1][1]) / (line[0][0] - line[1][1])
-                        if not i:
+                        gradient = (points[0][1]-points[1][1])/(points[0][0]-points[1][0])
+                        if (not i and gradient > 0) or (i and gradient < 0):
                             points.insert(1, vect(tile.onScreenPos.w, tile.onScreenPos.h))
                             points.insert(1, vect(0, tile.onScreenPos.h))
-                            for j, corner in enumerate((tile.onScreenPos.topleft, tile.onScreenPos.topright)):
-                                if corner[1] - line[0][1] < gradient * (corner[0] - line[0][0]):
-                                    py.draw.circle(self.drawSurface, 'white', corner, 2)
+                            if not points[0][1]:
+                                points.insert(1,vect(0,0))
+                            if gradient < 0:
+                                points.reverse()
 
-                                    # if j:
-                                    #     points.append(vect(tile.onScreenPos.w,0))
-                                    # else:
-                                    #     points.append(vect(0,0))
-                                    #     break
-                            py.draw.polygon(tile.image, (0, 0, 0, 0), points)
                         else:
-                            print('top')
+                            if points[-1][1] == tile.onScreenPos.h:
+                                points.insert(1,vect(tile.onScreenPos.w,tile.onScreenPos.h))
+                            points.insert(1,vect(tile.onScreenPos.w,0))
+                            points.insert(1,vect(0,0))
 
+
+                        self.polygon = py.draw.polygon(tile.image, (0, 0, 0, 0), points)
 
     def lineOfSight(self, win):
         self.drawSurface.fill(py.Color('#00000000'))
@@ -228,7 +228,7 @@ class PlayerSprite(py.sprite.Sprite):
             validCorners += validCornersVect
 
             if len(validCorners) > 2:
-                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 200), validCorners)
+                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), validCorners)
 
             for i, corner in enumerate(validCorners, 1):
                 py.draw.circle(self.drawSurface, 'White', corner, 10)
@@ -261,7 +261,7 @@ class PlayerSprite(py.sprite.Sprite):
         self.direction = inputDir
 
     def walk(self):
-        speed = 600  # 300
+        speed = 300  # 300
         self.input()
         self.rect.centerx += self.direction.x * speed * self.dt
         self.hitBox.centerx = self.rect.centerx
