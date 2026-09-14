@@ -8,10 +8,18 @@ from pygame.constants import *
 SCREENSIZE = (1280, 720)
 CENTER = tuple(map(lambda x: x // 2, SCREENSIZE))
 
-
 py.font.init()
 PATH = Path.cwd()
 FONT = py.font.Font('arial.ttf', 10)
+
+
+class Line:
+
+    def __init__(self, *points):
+        point1 = points[0]
+        point2 = points[1]
+        gradient = (point1.y - point2.y) / (point1.x - point2.x)
+        self.equation = lambda x, y: gradient * (x - point1.x) - y + point1
 
 
 class Controller:
@@ -163,7 +171,7 @@ class PlayerSprite(py.sprite.Sprite):
         elif wallPos.bottomright[0] <= 640 and wallPos.bottomright[1] <= 360:
             corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft
         elif wallPos.top >= 360:
-            corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft, wallPos.topleft
+            corners = wallPos.topleft, wallPos.bottomleft, wallPos.bottomright, wallPos.topright
         elif wallPos.right <= 640:
             corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
         elif wallPos.bottom <= 360:
@@ -182,37 +190,28 @@ class PlayerSprite(py.sprite.Sprite):
                 valid.append(False)
         return any(valid)
 
+
+    def pointCheck(self,lines):
+
     def blockUnseeables(self, linePairs):
         for tile in self.unseeables:
             tile.image = tile.ogImage.copy()
             if self.onScreen((tile.onScreenPos.topleft, tile.onScreenPos.topright, tile.onScreenPos.bottomleft,
                               tile.onScreenPos.bottomright)):
                 for lines in linePairs:
-                    for i, line in enumerate(lines):
-                        clippedLine = tile.onScreenPos.clipline(line)
-                        if clippedLine and clippedLine[0] != clippedLine[1]:
-                            points = [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
-                                      (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
+                    points = ()
+                    line1 = Line(lines[0])
+                    line2 = Line(lines[1])
 
-                            gradient = (points[0][1] - points[1][1]) / (points[0][0] - points[1][0])
+                    # for i, line in enumerate(lines):
+                    #     clippedLine = tile.onScreenPos.clipline(line)
+                    #     if clippedLine and clippedLine[0] != clippedLine[1]:
+                    #         points = [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
+                    #                   (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
+                    #
+                    #         gradient = (points[0][1] - points[1][1]) / (points[0][0] - points[1][0])
 
-                            if ((not i) and gradient > 0) or (i and gradient < 0):
-                                if gradient < 0:
-                                    points.reverse()
-                                points.insert(1, vect(tile.onScreenPos.w, tile.onScreenPos.h))
-                                points.insert(1, vect(0, tile.onScreenPos.h))
-                                if not points[0][1]:
-                                    points.insert(1, vect(0, 0))
-
-                            else:
-                                if points[-1][1] == tile.onScreenPos.h:
-                                    points.insert(1, vect(tile.onScreenPos.w, tile.onScreenPos.h))
-                                points.insert(1, vect(tile.onScreenPos.w, 0))
-                                if gradient < 0:
-                                    points.reverse()
-                                points.insert(1, vect(0, 0))
-
-                            py.draw.polygon(tile.image, (0, 0, 0, 0), points)
+                    # py.draw.polygon(tile.image, (0, 0, 0, 0), points)
 
     def lineOfSight(self, win):
         self.drawSurface.fill(py.Color('#00000000'))
@@ -236,7 +235,7 @@ class PlayerSprite(py.sprite.Sprite):
             validCorners += validCornersVect
 
             if len(validCorners) > 2:
-                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 200), validCorners)  # 200
+                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), validCorners)  # 200
 
             for i, corner in enumerate(validCorners, 1):
                 py.draw.circle(self.drawSurface, 'White', corner, 10)
