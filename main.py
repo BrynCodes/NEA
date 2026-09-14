@@ -190,8 +190,28 @@ class PlayerSprite(py.sprite.Sprite):
                 valid.append(False)
         return any(valid)
 
+    def pointCheck(self, rect, tile, *vects):
+        points = (rect.topleft, rect.topright, rect.bottomleft, rect.bottomright)
+        between = []
 
-    def pointCheck(self,lines):
+        d3 = vects[0].cross(vects[1])
+
+        for point in points:
+            point = vect(point) - vect(CENTER)
+            d1 = vects[0].cross(point)
+            d2 = point.cross(vects[1])
+            if d3 > 0:
+                between.append(d1 > 0 and d2 > 0)
+            else:
+                between.append(d1 < 0 and d2 < 0)
+
+        for i in range(len(between)):
+            if between[i]:
+                py.draw.circle(self.drawSurface, 'White', points[i], 3)
+
+
+
+
 
     def blockUnseeables(self, linePairs):
         for tile in self.unseeables:
@@ -199,9 +219,11 @@ class PlayerSprite(py.sprite.Sprite):
             if self.onScreen((tile.onScreenPos.topleft, tile.onScreenPos.topright, tile.onScreenPos.bottomleft,
                               tile.onScreenPos.bottomright)):
                 for lines in linePairs:
-                    points = ()
-                    line1 = Line(lines[0])
-                    line2 = Line(lines[1])
+                    vects = []
+                    for line in lines:
+                        vects.append(line[1] - line[0])
+
+                    self.pointCheck(tile.onScreenPos, tile, *vects)
 
                     # for i, line in enumerate(lines):
                     #     clippedLine = tile.onScreenPos.clipline(line)
@@ -224,10 +246,14 @@ class PlayerSprite(py.sprite.Sprite):
             validCornersVect = []
             shadowCorner = []
             if self.onScreen(corners):
+
                 for corner in corners:
-                    cornerVect = (vect(corner) - pos).normalize()
+                    cornerVect = (vect(
+                        corner) - pos).normalize()  # the vector from the middle of screen(Character) to the corner. Normalised
+
                     if not wall.onScreenPos.collidepoint(
-                            vect(corner) - cornerVect) or cornerVect.y == 0 or cornerVect.x == 0:
+                            vect(
+                                corner) - cornerVect) or cornerVect.y == 0 or cornerVect.x == 0:  # Checks if the corner is an outer corner.
                         cornerVect.scale_to_length(2000)
                         validCornersVect.insert(0, cornerVect + pos)
                         shadowCorner.append(vect(corner))
@@ -237,9 +263,9 @@ class PlayerSprite(py.sprite.Sprite):
             if len(validCorners) > 2:
                 py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), validCorners)  # 200
 
-            for i, corner in enumerate(validCorners, 1):
-                py.draw.circle(self.drawSurface, 'White', corner, 10)
-                self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
+            # for i, corner in enumerate(validCorners, 1):
+            #     py.draw.circle(self.drawSurface, 'White', corner, 10)
+            #     self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
 
             lines.append(zip(shadowCorner, reversed(validCornersVect)))
         self.blockUnseeables(lines)
@@ -315,7 +341,7 @@ def main():
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
     CollisionTile((-64, 32), wall2, walls, seeables)
-    # CollisionTile((100, -73), wall, walls, seeables)
+    CollisionTile((100, -73), wall, walls, seeables)
     CollisionTile((-200, 125), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
     # CollisionTile((89, 320), wall, walls)
