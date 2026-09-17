@@ -13,15 +13,6 @@ PATH = Path.cwd()
 FONT = py.font.Font('arial.ttf', 10)
 
 
-class Line:
-
-    def __init__(self, *points):
-        point1 = points[0]
-        point2 = points[1]
-        gradient = (point1.y - point2.y) / (point1.x - point2.x)
-        self.equation = lambda x, y: gradient * (x - point1.x) - y + point1
-
-
 class Controller:
 
     def __init__(self):
@@ -190,8 +181,10 @@ class PlayerSprite(py.sprite.Sprite):
                 valid.append(False)
         return any(valid)
 
-    def pointCheck(self, rect, tile, *vects):
+    @staticmethod
+    def pointCheck(rect, *vects):
         points = (rect.topleft, rect.topright, rect.bottomleft, rect.bottomright)
+        pointsRel = (vect(0, 0), vect(rect.w, 0), vect(0, rect.h), vect(rect.w, rect.h))
         between = []
 
         d3 = vects[0].cross(vects[1])
@@ -205,13 +198,26 @@ class PlayerSprite(py.sprite.Sprite):
             else:
                 between.append(d1 < 0 and d2 < 0)
 
-        for i in range(len(between)):
-            if between[i]:
-                py.draw.circle(self.drawSurface, 'White', points[i], 3)
+        return [pointsRel[i] for i in range(len(between)) if between[i]]
+
+    def arrangePoints(self, points):
+        arrrangedPoints = []
+        pointNum = len(points)
+        distanceFromOrigin = list(map(lambda x: x.length_squared(), points))
+
+        miniDist = distanceFromOrigin.index(min(distanceFromOrigin))
+        distanceFromOrigin.pop(miniDist)
+        maxiDist = distanceFromOrigin.index(max(distanceFromOrigin))
+        distanceFromOrigin.pop(maxiDist)
+
+        arrrangedPoints.append(points.pop(miniDist))
+        arrrangedPoints.append(points.pop(maxiDist))
+        arrrangedPoints.insert(1, points.pop())
+        if pointNum == 4:
+            arrrangedPoints.append(points.pop())
 
 
-
-
+        return arrrangedPoints
 
     def blockUnseeables(self, linePairs):
         for tile in self.unseeables:
@@ -220,20 +226,28 @@ class PlayerSprite(py.sprite.Sprite):
                               tile.onScreenPos.bottomright)):
                 for lines in linePairs:
                     vects = []
+                    points = []
                     for line in lines:
                         vects.append(line[1] - line[0])
 
-                    self.pointCheck(tile.onScreenPos, tile, *vects)
+                        clippedLine = tile.onScreenPos.clipline(line)
 
-                    # for i, line in enumerate(lines):
-                    #     clippedLine = tile.onScreenPos.clipline(line)
-                    #     if clippedLine and clippedLine[0] != clippedLine[1]:
-                    #         points = [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
-                    #                   (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
-                    #
-                    #         gradient = (points[0][1] - points[1][1]) / (points[0][0] - points[1][0])
+                        if clippedLine and clippedLine[0] != clippedLine[1]:
+                            points = [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
+                                      (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
 
-                    # py.draw.polygon(tile.image, (0, 0, 0, 0), points)
+                    points += self.pointCheck(tile.onScreenPos, *vects)
+
+
+
+                    if len(points) > 1:
+                        arrangedPoints = self.arrangePoints(points)
+                        py.draw.polygon(tile.image, (0, 0, 0, 0), arrangedPoints)
+
+                        for i, corner in enumerate(arrangedPoints, 1):
+                            corner += tile.onScreenPos.topleft
+                            py.draw.circle(self.drawSurface, 'White', corner, 10)
+                            self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
 
     def lineOfSight(self, win):
         self.drawSurface.fill(py.Color('#00000000'))
@@ -340,7 +354,7 @@ def main():
     walls = py.sprite.Group()
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
-    CollisionTile((-64, 32), wall2, walls, seeables)
+    CollisionTile((-64, 128), wall2, walls, seeables)
     CollisionTile((100, -73), wall, walls, seeables)
     CollisionTile((-200, 125), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
