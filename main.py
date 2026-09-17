@@ -213,7 +213,8 @@ class PlayerSprite(py.sprite.Sprite):
         arrrangedPoints.append(points.pop(miniDist))
         arrrangedPoints.append(points.pop(maxiDist))
         arrrangedPoints.insert(1, points.pop())
-        if pointNum == 4:
+
+        for i in range(pointNum-3):
             arrrangedPoints.append(points.pop())
 
 
@@ -308,7 +309,7 @@ class PlayerSprite(py.sprite.Sprite):
         self.direction = inputDir
 
     def walk(self):
-        speed = 300  # 300
+        speed = 200  # 300
         self.input()
         self.rect.centerx += self.direction.x * speed * self.dt
         self.hitBox.centerx = self.rect.centerx
@@ -354,7 +355,7 @@ def main():
     walls = py.sprite.Group()
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
-    CollisionTile((-64, 128), wall2, walls, seeables)
+    # CollisionTile((-64, 128), wall2, walls, seeables)
     CollisionTile((100, -73), wall, walls, seeables)
     CollisionTile((-200, 125), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
@@ -367,7 +368,6 @@ def main():
     allSprites.add(charcter, walls)
     allSprites.addBg(py.sprite.Group())
 
-    blur = BackgroundBlur()
 
     while running:
         dt = rr.tick(120) / 1000
@@ -378,7 +378,6 @@ def main():
         allSprites.update(dt)
         allSprites.cDraw(win, charcter)
 
-        # blur.update(win)
 
         py.display.update()
 
