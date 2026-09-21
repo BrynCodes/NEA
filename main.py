@@ -200,7 +200,13 @@ class PlayerSprite(py.sprite.Sprite):
 
         return [pointsRel[i] for i in range(len(between)) if between[i]]
 
-    def arrangePoints(self, points):
+    @staticmethod
+    def arrangePoints(points):
+
+        sortedPoints = points.copy()
+        sortedPoints.sort(key=lambda x: x.y)
+        print(sortedPoints)
+
         arrrangedPoints = []
         pointNum = len(points)
         distanceFromOrigin = list(map(lambda x: x.length_squared(), points))
@@ -214,9 +220,8 @@ class PlayerSprite(py.sprite.Sprite):
         arrrangedPoints.append(points.pop(maxiDist))
         arrrangedPoints.insert(1, points.pop())
 
-        for i in range(pointNum-3):
+        for i in range(pointNum - 3):
             arrrangedPoints.append(points.pop())
-
 
         return arrrangedPoints
 
@@ -228,21 +233,21 @@ class PlayerSprite(py.sprite.Sprite):
                 for lines in linePairs:
                     vects = []
                     points = []
+                    clippedPoints = []
                     for line in lines:
                         vects.append(line[1] - line[0])
 
                         clippedLine = tile.onScreenPos.clipline(line)
 
                         if clippedLine and clippedLine[0] != clippedLine[1]:
-                            points = [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
-                                      (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
+                            clippedPoints += [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
+                                              (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
 
+                    points += clippedPoints
                     points += self.pointCheck(tile.onScreenPos, *vects)
 
-
-
                     if len(points) > 1:
-                        arrangedPoints = self.arrangePoints(points)
+                        arrangedPoints = self.arrangePoints(points.copy())
                         py.draw.polygon(tile.image, (0, 0, 0, 0), arrangedPoints)
 
                         for i, corner in enumerate(arrangedPoints, 1):
@@ -273,16 +278,16 @@ class PlayerSprite(py.sprite.Sprite):
                         validCornersVect.insert(0, cornerVect + pos)
                         shadowCorner.append(vect(corner))
                     validCorners.append(corner)
-            validCorners += validCornersVect
+                validCorners += validCornersVect
 
-            if len(validCorners) > 2:
-                py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), validCorners)  # 200
+                if len(validCorners) > 2:
+                    py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), validCorners)  # 200
 
-            # for i, corner in enumerate(validCorners, 1):
-            #     py.draw.circle(self.drawSurface, 'White', corner, 10)
-            #     self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
+                # for i, corner in enumerate(validCorners, 1):
+                #     py.draw.circle(self.drawSurface, 'White', corner, 10)
+                #     self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
 
-            lines.append(zip(shadowCorner, reversed(validCornersVect)))
+                lines.append(zip(shadowCorner, reversed(validCornersVect)))
         self.blockUnseeables(lines)
 
         win.blit(self.drawSurface, (0, 0))
@@ -355,7 +360,7 @@ def main():
     walls = py.sprite.Group()
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
-    # CollisionTile((-64, 128), wall2, walls, seeables)
+    CollisionTile((-64, 128), wall2, walls, seeables)
     CollisionTile((100, -73), wall, walls, seeables)
     CollisionTile((-200, 125), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
@@ -368,7 +373,6 @@ def main():
     allSprites.add(charcter, walls)
     allSprites.addBg(py.sprite.Group())
 
-
     while running:
         dt = rr.tick(120) / 1000
         win.fill((86, 86, 86))
@@ -377,7 +381,6 @@ def main():
                 running = False
         allSprites.update(dt)
         allSprites.cDraw(win, charcter)
-
 
         py.display.update()
 
