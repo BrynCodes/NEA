@@ -255,7 +255,7 @@ class PlayerSprite(py.sprite.Sprite):
                     points += clippedPoints
                     points += self.pointCheck(tile.onScreenPos, *vects)
 
-                    if len(points) > 1:
+                    if len(points) > 2:
                         arrangedPoints = self.arrangePoints(points.copy())
                         py.draw.polygon(tile.image, (0, 0, 0, 0), arrangedPoints)
 
@@ -362,16 +362,16 @@ def main():
 
     wall = py.Surface((64, 128), SRCALPHA)
     wall2 = py.Surface((128, 64), SRCALPHA)
-    x = wall.copy()
+    x = py.Surface((256,64),SRCALPHA)
     x.fill('blue')
     wall.fill('red')
     wall2.fill('red')
     walls = py.sprite.Group()
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
-    CollisionTile((-64, 128), wall2, walls, seeables)
-    CollisionTile((100, -73), wall, walls, seeables)
-    CollisionTile((-200, 125), x, walls, unseeables)
+    CollisionTile((64, 328), wall2, walls, seeables)
+    CollisionTile((200, 173), wall, walls, seeables)
+    CollisionTile((-100, 125), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
     # CollisionTile((89, 320), wall, walls)
     # CollisionTile((200, 320), wall, walls)
