@@ -205,23 +205,32 @@ class PlayerSprite(py.sprite.Sprite):
 
         sortedPoints = points.copy()
         sortedPoints.sort(key=lambda x: x.y)
-        print(sortedPoints)
 
-        arrrangedPoints = []
-        pointNum = len(points)
-        distanceFromOrigin = list(map(lambda x: x.length_squared(), points))
 
-        miniDist = distanceFromOrigin.index(min(distanceFromOrigin))
-        distanceFromOrigin.pop(miniDist)
-        maxiDist = distanceFromOrigin.index(max(distanceFromOrigin))
-        distanceFromOrigin.pop(maxiDist)
+        firstTwo = sortedPoints[:2]
+        rest = sortedPoints[2:]
 
-        arrrangedPoints.append(points.pop(miniDist))
-        arrrangedPoints.append(points.pop(maxiDist))
-        arrrangedPoints.insert(1, points.pop())
+        firstTwo.sort(key=lambda x:x.x)
+        rest.sort(key=lambda x:x.x)
+        arrrangedPoints = [firstTwo[0]]
+        arrrangedPoints += rest
+        arrrangedPoints.append(firstTwo[1])
 
-        for i in range(pointNum - 3):
-            arrrangedPoints.append(points.pop())
+
+        # pointNum = len(points)
+        # distanceFromOrigin = list(map(lambda x: x.length_squared(), points))
+        #
+        # miniDist = distanceFromOrigin.index(min(distanceFromOrigin))
+        # distanceFromOrigin.pop(miniDist)
+        # maxiDist = distanceFromOrigin.index(max(distanceFromOrigin))
+        # distanceFromOrigin.pop(maxiDist)
+        #
+        # arrrangedPoints.append(points.pop(miniDist))
+        # arrrangedPoints.append(points.pop(maxiDist))
+        # arrrangedPoints.insert(1, points.pop())
+        #
+        # for i in range(pointNum - 3):
+        #     arrrangedPoints.append(points.pop())
 
         return arrrangedPoints
 
