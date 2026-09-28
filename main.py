@@ -194,43 +194,35 @@ class PlayerSprite(py.sprite.Sprite):
             d1 = vects[0].cross(point)
             d2 = point.cross(vects[1])
             if d3 > 0:
-                between.append(d1 > 0 and d2 > 0)
+                between.append(d1 >= 0 and d2 >= 0)
             else:
-                between.append(d1 < 0 and d2 < 0)
+                between.append(d1 <= 0 and d2 <= 0)
 
         return [pointsRel[i] for i in range(len(between)) if between[i]]
 
     @staticmethod
     def arrangePoints(points):
 
-        sortedPoints = points.copy()
-        sortedPoints.sort(key=lambda x: x.y)
+        points.sort(key=lambda x: x.y)
 
+        firstTwo = points[:2]
+        rest = points[2:]
 
-        firstTwo = sortedPoints[:2]
-        rest = sortedPoints[2:]
-
-        firstTwo.sort(key=lambda x:x.x)
-        rest.sort(key=lambda x:x.x)
+        firstTwo.sort(key=lambda x: x.x)
+        rest.sort(key=lambda x: x.x)
         arrrangedPoints = [firstTwo[0]]
+
+        if len(rest) == 3:
+            if rest[1].x == rest[2].x:
+                arrrangedPoints.append(rest.pop(0))
+                arrrangedPoints.append(rest.pop(1))
+
+
         arrrangedPoints += rest
         arrrangedPoints.append(firstTwo[1])
 
 
-        # pointNum = len(points)
-        # distanceFromOrigin = list(map(lambda x: x.length_squared(), points))
-        #
-        # miniDist = distanceFromOrigin.index(min(distanceFromOrigin))
-        # distanceFromOrigin.pop(miniDist)
-        # maxiDist = distanceFromOrigin.index(max(distanceFromOrigin))
-        # distanceFromOrigin.pop(maxiDist)
-        #
-        # arrrangedPoints.append(points.pop(miniDist))
-        # arrrangedPoints.append(points.pop(maxiDist))
-        # arrrangedPoints.insert(1, points.pop())
-        #
-        # for i in range(pointNum - 3):
-        #     arrrangedPoints.append(points.pop())
+
 
         return arrrangedPoints
 
@@ -251,6 +243,12 @@ class PlayerSprite(py.sprite.Sprite):
                         if clippedLine and clippedLine[0] != clippedLine[1]:
                             clippedPoints += [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
                                               (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
+
+                            for i in clippedPoints:
+                                if i.x == tile.rect.w - 1:
+                                    i.x = tile.rect.w
+                                if i.y == tile.rect.h - 1:
+                                    i.y = tile.rect.h
 
                     points += clippedPoints
                     points += self.pointCheck(tile.onScreenPos, *vects)
@@ -362,16 +360,16 @@ def main():
 
     wall = py.Surface((64, 128), SRCALPHA)
     wall2 = py.Surface((128, 64), SRCALPHA)
-    x = py.Surface((256,64),SRCALPHA)
+    x = py.Surface((256, 64), SRCALPHA)
     x.fill('blue')
     wall.fill('red')
     wall2.fill('red')
     walls = py.sprite.Group()
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
-    CollisionTile((64, 328), wall2, walls, seeables)
+    CollisionTile((64, 378), wall2, walls, seeables)
     CollisionTile((200, 173), wall, walls, seeables)
-    CollisionTile((-100, 125), x, walls, unseeables)
+    CollisionTile((300, 325), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
     # CollisionTile((89, 320), wall, walls)
     # CollisionTile((200, 320), wall, walls)
