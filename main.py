@@ -1,4 +1,3 @@
-import math
 from pathlib import Path
 
 import pygame as py
@@ -52,7 +51,7 @@ class Group(py.sprite.Group):
                 win.blit(spr.image, spr.centerScreenRect)
             else:
                 win.blit(spr.image, spr.updateScreenPos(self.offset))
-        target.lineOfSight(win)
+        target.lineOfSight.update(win)
 
 
 class Tile(py.sprite.Sprite):
@@ -82,27 +81,177 @@ class CollisionTile(Tile):
         self.hitbox = self.rect
 
 
-class BackgroundBlur:
+class LineOfSight:
 
-    def __init__(self):
-        self.circleBlurOG = py.image.load(PATH / 'unseeable.png').convert_alpha()
-        self.circleBlurOG.set_alpha(200)
+    def __init__(self, seeables, unseeables):
+        self.seeables = seeables
+        self.unseeables = unseeables
+        self.drawSurface = py.Surface((1280, 720), py.SRCALPHA)
+
+    @staticmethod
+    def onScreen(corners):
+        valid = []
+        for corner in corners:
+            if 1280 >= corner[0] >= 0 and 720 >= corner[1] >= 0:
+                valid.append(True)
+            else:
+                valid.append(False)
+        return any(valid)
+
+    @staticmethod
+    def pointCheck(rect, clippedLine, *vects):
+        if clippedLine:
+            let = 0
+        else:
+            let = 1500
+        points = (rect.topleft, rect.topright, rect.bottomleft, rect.bottomright)
+        pointsRel = (vect(0, 0), vect(rect.w, 0), vect(0, rect.h), vect(rect.w, rect.h))
+        between = []
+
+        d3 = vects[0].cross(vects[1])
+
+        for point in points:
+            point = vect(point) - vect(CENTER)
+            d1 = vects[0].cross(point)
+            d2 = point.cross(vects[1])
+            if d3 > 0:
+                between.append(d1 >= -let and d2 >= -let)
+            else:
+                between.append(d1 <= let and d2 <= let)
+
+        return [pointsRel[i] for i in range(len(between)) if between[i]]
+
+    @staticmethod
+    def arrangePoints(points):
+
+        points.sort(key=lambda x: x.y)
+
+        firstTwo = points[:2]
+        rest = points[2:]
+
+        firstTwo.sort(key=lambda x: x.x)
+        rest.sort(key=lambda x: x.x)
+        arrrangedPoints = [firstTwo[0]]
+
+        if len(rest) == 3:
+            if rest[1].x == rest[2].x:
+                arrrangedPoints.append(rest.pop(0))
+                arrrangedPoints.append(rest.pop(1))
+
+        arrrangedPoints += rest
+        arrrangedPoints.append(firstTwo[1])
+
+        return arrrangedPoints
+
+    @staticmethod
+    def clippedLineCalculation(tile, line):
+        clippedPoints = []
+        clippedLine = tile.onScreenPos.clipline(line)
+
+        if clippedLine and clippedLine[0] != clippedLine[1]:
+            clippedPoints += [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
+                              (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
+
+            for i in clippedPoints:
+                if i.x == tile.rect.w - 1:
+                    i.x = tile.rect.w
+                if i.y == tile.rect.h - 1:
+                    i.y = tile.rect.h
+
+        return clippedPoints
+
+    def blockUnseeables(self, linePairs):
+        for tile in self.unseeables:
+            tile.image = tile.ogImage.copy()
+            if self.onScreen((tile.onScreenPos.topleft, tile.onScreenPos.topright, tile.onScreenPos.bottomleft,
+                              tile.onScreenPos.bottomright)):
+                for lines in linePairs:
+                    vects = []
+                    points = []
+                    clippedPoints = []
+                    for line in lines:
+                        vects.append(line[1] - line[0])
+                        clippedPoint = self.clippedLineCalculation(tile, line)
+                        clippedPoints.append(clippedPoint)
+                        points += clippedPoint
+
+                    points += self.pointCheck(tile.onScreenPos, any(clippedPoints), *vects)
+
+                    if len(points) > 2:
+                        arrangedPoints = self.arrangePoints(points.copy())
+                        py.draw.polygon(tile.image, (0, 0, 0, 0), arrangedPoints)
+
+    @staticmethod
+    def cornerCheckOrder(wall):
+        wallPos = wall.onScreenPos
+        if wallPos.topleft[0] >= 640 and wallPos.topleft[1] >= 360:
+            corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft
+        elif wallPos.topright[0] <= 640 and wallPos.topright[1] >= 360:
+            corners = wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
+        elif wallPos.bottomleft[0] >= 640 and wallPos.bottomleft[1] <= 360:
+            corners = wallPos.topleft, wallPos.topright, wallPos.bottomright
+        elif wallPos.bottomright[0] <= 640 and wallPos.bottomright[1] <= 360:
+            corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft
+        elif wallPos.top >= 360:
+            corners = wallPos.topleft, wallPos.bottomleft, wallPos.bottomright, wallPos.topright
+        elif wallPos.right <= 640:
+            corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
+        elif wallPos.bottom <= 360:
+            corners = wallPos.bottomleft, wallPos.topleft, wallPos.topright, wallPos.bottomright
+        elif wallPos.left >= 640:
+            corners = wallPos.topleft, wallPos.topright, wallPos.bottomright, wallPos.bottomleft
+        else:
+            corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft
+        return corners
+
+    @staticmethod
+    def vectorCalulation(corner, wall):
+        pos = (640, 360)
+        cornerVect = (vect(
+            corner) - pos).normalize()  # the vector from the middle of screen(Character) to the corner. Normalised
+
+        if (not wall.onScreenPos.collidepoint(vect(corner) - cornerVect)
+                or cornerVect.y == 0 or cornerVect.x == 0):  # Checks if the corner is an outer corner.
+            cornerVect.scale_to_length(2000)
+            return cornerVect + pos
+        return False
+
+    def wallShadowCast(self, wall, corners):
+        endOfShadowPoints = []
+        startOfShadowPoints = []
+        allCorners = list(corners)
+
+        for corner in corners:
+            endOfShadowPoint = self.vectorCalulation(corner, wall)
+            if endOfShadowPoint:
+                endOfShadowPoints.insert(0, endOfShadowPoint)
+                startOfShadowPoints.append(vect(corner))
+
+        allCorners += endOfShadowPoints
+
+        if len(allCorners) > 2:
+            py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), allCorners)  # 200
+
+        return zip(startOfShadowPoints, reversed(endOfShadowPoints))
 
     def update(self, win):
-        mousePos = py.mouse.get_pos()
-        angle = math.degrees(math.atan2(-(mousePos[1] - 360), mousePos[0] - 640)) - 45
-        blur = py.transform.rotate(self.circleBlurOG, angle)
-        blurRect = blur.get_frect(center=(640, 360))
-        win.blit(blur, blurRect)
+        self.drawSurface.fill(py.Color('#00000000'))
+
+        lines = []
+        for wall in self.seeables:
+            corners = self.cornerCheckOrder(wall)
+            if self.onScreen(corners):
+                lines.append(self.wallShadowCast(wall, corners))
+
+        self.blockUnseeables(lines)
+
+        win.blit(self.drawSurface, (0, 0))
 
 
 class PlayerSprite(py.sprite.Sprite):
 
     def __init__(self, walls, seeables, unseeables, *groups):
         super().__init__(*groups)
-
-        pos = 0, 0
-        self.drawSurface = py.Surface((1280, 720), py.SRCALPHA)
 
         # directory = base_path / 'Character'
         #
@@ -119,13 +268,13 @@ class PlayerSprite(py.sprite.Sprite):
         self.image = py.Surface((64, 64))
         self.image.fill('blue')
 
-        self.rect: py.FRect = self.image.get_frect(center=pos)
+        self.rect: py.FRect = self.image.get_frect(center=(0, 0))
         self.hitBox = self.rect
         self.centerScreenRect = self.image.get_frect(center=CENTER)
 
+        self.lineOfSight = LineOfSight(seeables, unseeables)
         self.direction = vect((0, 0))
         self.walls = walls
-        self.unseeables = unseeables
         self.seeables = seeables
         self.cooldown = 0
         self.dt = None
@@ -148,156 +297,6 @@ class PlayerSprite(py.sprite.Sprite):
                     elif self.direction.y < 0:
                         self.hitBox.top = wall.hitbox.bottom
                     self.rect.centery = self.hitBox.centery
-
-    @staticmethod
-    def cornerCheckOrder(wall):
-        wallPos = wall.onScreenPos
-        corners = None
-        if wallPos.topleft[0] >= 640 and wallPos.topleft[1] >= 360:
-            corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft
-        elif wallPos.topright[0] <= 640 and wallPos.topright[1] >= 360:
-            corners = wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
-        elif wallPos.bottomleft[0] >= 640 and wallPos.bottomleft[1] <= 360:
-            corners = wallPos.topleft, wallPos.topright, wallPos.bottomright
-        elif wallPos.bottomright[0] <= 640 and wallPos.bottomright[1] <= 360:
-            corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft
-        elif wallPos.top >= 360:
-            corners = wallPos.topleft, wallPos.bottomleft, wallPos.bottomright, wallPos.topright
-        elif wallPos.right <= 640:
-            corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
-        elif wallPos.bottom <= 360:
-            corners = wallPos.bottomleft, wallPos.topleft, wallPos.topright, wallPos.bottomright
-        elif wallPos.left >= 640:
-            corners = wallPos.topleft, wallPos.topright, wallPos.bottomright, wallPos.bottomleft
-        return corners
-
-    @staticmethod
-    def onScreen(corners):
-        valid = []
-        for corner in corners:
-            if 1280 >= corner[0] >= 0 and 720 >= corner[1] >= 0:
-                valid.append(True)
-            else:
-                valid.append(False)
-        return any(valid)
-
-    @staticmethod
-    def pointCheck(rect, *vects):
-        points = (rect.topleft, rect.topright, rect.bottomleft, rect.bottomright)
-        pointsRel = (vect(0, 0), vect(rect.w, 0), vect(0, rect.h), vect(rect.w, rect.h))
-        between = []
-
-        d3 = vects[0].cross(vects[1])
-
-        for point in points:
-            point = vect(point) - vect(CENTER)
-            d1 = vects[0].cross(point)
-            d2 = point.cross(vects[1])
-            if d3 > 0:
-                between.append(d1 >= 0 and d2 >= 0)
-            else:
-                between.append(d1 <= 0 and d2 <= 0)
-
-        return [pointsRel[i] for i in range(len(between)) if between[i]]
-
-    @staticmethod
-    def arrangePoints(points):
-
-        points.sort(key=lambda x: x.y)
-
-        firstTwo = points[:2]
-        rest = points[2:]
-
-        firstTwo.sort(key=lambda x: x.x)
-        rest.sort(key=lambda x: x.x)
-        arrrangedPoints = [firstTwo[0]]
-
-        if len(rest) == 3:
-            if rest[1].x == rest[2].x:
-                arrrangedPoints.append(rest.pop(0))
-                arrrangedPoints.append(rest.pop(1))
-
-
-        arrrangedPoints += rest
-        arrrangedPoints.append(firstTwo[1])
-
-
-
-
-        return arrrangedPoints
-
-    def blockUnseeables(self, linePairs):
-        for tile in self.unseeables:
-            tile.image = tile.ogImage.copy()
-            if self.onScreen((tile.onScreenPos.topleft, tile.onScreenPos.topright, tile.onScreenPos.bottomleft,
-                              tile.onScreenPos.bottomright)):
-                for lines in linePairs:
-                    vects = []
-                    points = []
-                    clippedPoints = []
-                    for line in lines:
-                        vects.append(line[1] - line[0])
-
-                        clippedLine = tile.onScreenPos.clipline(line)
-
-                        if clippedLine and clippedLine[0] != clippedLine[1]:
-                            clippedPoints += [vect(clippedLine[0]) - vect(tile.onScreenPos.topleft),
-                                              (vect(clippedLine[1]) - vect(tile.onScreenPos.topleft))]
-
-                            for i in clippedPoints:
-                                if i.x == tile.rect.w - 1:
-                                    i.x = tile.rect.w
-                                if i.y == tile.rect.h - 1:
-                                    i.y = tile.rect.h
-
-                    points += clippedPoints
-                    points += self.pointCheck(tile.onScreenPos, *vects)
-
-                    if len(points) > 2:
-                        arrangedPoints = self.arrangePoints(points.copy())
-                        py.draw.polygon(tile.image, (0, 0, 0, 0), arrangedPoints)
-
-                        for i, corner in enumerate(arrangedPoints, 1):
-                            corner += tile.onScreenPos.topleft
-                            py.draw.circle(self.drawSurface, 'White', corner, 10)
-                            self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
-
-    def lineOfSight(self, win):
-        self.drawSurface.fill(py.Color('#00000000'))
-
-        pos = (640, 360)
-        lines = []
-        for wall in self.seeables:
-            corners = self.cornerCheckOrder(wall)
-            validCorners = []
-            validCornersVect = []
-            shadowCorner = []
-            if self.onScreen(corners):
-
-                for corner in corners:
-                    cornerVect = (vect(
-                        corner) - pos).normalize()  # the vector from the middle of screen(Character) to the corner. Normalised
-
-                    if not wall.onScreenPos.collidepoint(
-                            vect(
-                                corner) - cornerVect) or cornerVect.y == 0 or cornerVect.x == 0:  # Checks if the corner is an outer corner.
-                        cornerVect.scale_to_length(2000)
-                        validCornersVect.insert(0, cornerVect + pos)
-                        shadowCorner.append(vect(corner))
-                    validCorners.append(corner)
-                validCorners += validCornersVect
-
-                if len(validCorners) > 2:
-                    py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), validCorners)  # 200
-
-                # for i, corner in enumerate(validCorners, 1):
-                #     py.draw.circle(self.drawSurface, 'White', corner, 10)
-                #     self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
-
-                lines.append(zip(shadowCorner, reversed(validCornersVect)))
-        self.blockUnseeables(lines)
-
-        win.blit(self.drawSurface, (0, 0))
 
     def input(self):
         keys = py.key.get_pressed()
