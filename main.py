@@ -3,13 +3,14 @@ from pathlib import Path
 import pygame as py
 from pygame import Vector2 as vect
 from pygame.constants import *
+from pytmx.util_pygame import load_pygame
 
 SCREENSIZE = (1280, 720)
 CENTER = tuple(map(lambda x: x // 2, SCREENSIZE))
 
 py.font.init()
-PATH = Path.cwd()
-FONT = py.font.Font('arial.ttf', 10)
+ASSETSPATH = Path('Assets')
+FONT = py.font.Font(ASSETSPATH / 'arial.ttf', 10)
 
 
 class Controller:
@@ -49,6 +50,10 @@ class Group(py.sprite.Group):
         for spr in sorted(self.sprites(), key=lambda sprite: sprite.ySort):
             if spr == target:
                 win.blit(spr.image, spr.centerScreenRect)
+
+            elif spr.properties == 'CollisionRectangles':
+                spr.updateScreenPos(self.offset)
+
             else:
                 win.blit(spr.image, spr.updateScreenPos(self.offset))
         target.lineOfSight.update(win)
@@ -230,7 +235,7 @@ class LineOfSight:
         allCorners += endOfShadowPoints
 
         if len(allCorners) > 2:
-            py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), allCorners)  # 200
+            py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 200), allCorners)  # 200
 
         return zip(startOfShadowPoints, reversed(endOfShadowPoints))
 
@@ -248,7 +253,7 @@ class LineOfSight:
         win.blit(self.drawSurface, (0, 0))
 
 
-class PlayerSprite(py.sprite.Sprite):
+class Player(py.sprite.Sprite):
 
     def __init__(self, walls, seeables, unseeables, *groups):
         super().__init__(*groups)
@@ -352,32 +357,55 @@ class PlayerSprite(py.sprite.Sprite):
         # self.animate()
 
 
-def main():
-    win = py.display.set_mode(SCREENSIZE)
-    rr = py.time.Clock()
-    running = True
+def tileMapSetup(allSprites, walls, unseeables, seeables):
+    path = ASSETSPATH / 'Tilemaps'
+    map = load_pygame(path / 'untitled.tmx')
+    bgGroup = py.sprite.Group()
 
+    for layer in map.layers:
+        if layer.id != 3:
+            for x, y, surface in layer.tiles():
+                Tile((x * 64, y * 64), surface, bgGroup)
+    for object in map.objects:
+        Tile((object.x, object.y), py.Surface((object.width, object.height)), walls, seeables,
+             properties='CollisionRectangles')
+
+    allSprites.addBg(bgGroup)
+
+
+def debugMapSetup(allSprites, walls, unseeables, seeables):
     wall = py.Surface((64, 128), SRCALPHA)
     wall2 = py.Surface((128, 64), SRCALPHA)
     x = py.Surface((256, 64), SRCALPHA)
     x.fill('blue')
     wall.fill('red')
     wall2.fill('red')
-    walls = py.sprite.Group()
-    seeables = py.sprite.Group()
-    unseeables = py.sprite.Group()
+
     CollisionTile((64, 378), wall2, walls, seeables)
     CollisionTile((200, 173), wall, walls, seeables)
     CollisionTile((300, 325), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
     # CollisionTile((89, 320), wall, walls)
     # CollisionTile((200, 320), wall, walls)
+    allSprites.addBg(py.sprite.Group())
 
+
+def main():
+    win = py.display.set_mode(SCREENSIZE)
+    rr = py.time.Clock()
+    running = True
     allSprites = Group()
-    charcter = PlayerSprite(walls, seeables, unseeables)
+    walls = py.sprite.Group()
+    seeables = py.sprite.Group()
+    unseeables = py.sprite.Group()
+
+    tileMapSetup(allSprites, walls, unseeables, seeables)
+
+    charcter = Player(walls, seeables, unseeables)
+    charcter.rect.center = [100, 100]
+    charcter.hitBox.center = [613, 1207]
 
     allSprites.add(charcter, walls)
-    allSprites.addBg(py.sprite.Group())
 
     while running:
         dt = rr.tick(120) / 1000
