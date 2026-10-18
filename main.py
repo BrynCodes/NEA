@@ -253,12 +253,11 @@ class LineOfSight:
         win.blit(self.drawSurface, (0, 0))
 
 
-class Player(py.sprite.Sprite):
+class Character(py.sprite.Sprite):
 
-    def __init__(self, walls, seeables, unseeables, *groups):
+    def __init__(self, dirName, walls, *groups):
         super().__init__(*groups)
-
-        # directory = base_path / 'Character'
+        # directory = base_path / dirName
         #
         # self.images = {'front': dict(), 'left': dict(), 'right': dict(), 'back': dict()}
         # for file, type, i in zip(listdir(directory), cycle((1, 'idle', 2)), range(12)):
@@ -275,17 +274,13 @@ class Player(py.sprite.Sprite):
 
         self.rect: py.FRect = self.image.get_frect(center=(0, 0))
         self.hitBox = self.rect
-        self.centerScreenRect = self.image.get_frect(center=CENTER)
 
-        self.lineOfSight = LineOfSight(seeables, unseeables)
         self.direction = vect((0, 0))
         self.walls = walls
-        self.seeables = seeables
-        self.cooldown = 0
         self.dt = None
-        self.ySort = self.rect.centery
 
-        # self.audioMixer = audioMixer
+    def input(self):
+        pass
 
     def collisionCheck(self, axis):
         for wall in py.sprite.spritecollide(self, self.walls, False):
@@ -302,27 +297,6 @@ class Player(py.sprite.Sprite):
                     elif self.direction.y < 0:
                         self.hitBox.top = wall.hitbox.bottom
                     self.rect.centery = self.hitBox.centery
-
-    def input(self):
-        keys = py.key.get_pressed()
-        inputDir = vect()
-        if keys[K_w] or CONTROLLER.getJoystick('Up'):
-            inputDir.y = -1
-            self.facing = 'back'
-        if keys[K_s] or CONTROLLER.getJoystick('Down'):
-            inputDir.y = 1
-            self.facing = 'front'
-        if keys[K_a] or CONTROLLER.getJoystick('Left'):
-            inputDir.x = -1
-            self.facing = 'left'
-        if keys[K_d] or CONTROLLER.getJoystick('Right'):
-            inputDir.x = 1
-            self.facing = 'right'
-        if inputDir:
-            inputDir.normalize_ip()
-            # if not py.mixer.get_busy():
-            #     self.audioMixer.playSound('footsteps')
-        self.direction = inputDir
 
     def walk(self):
         speed = 200  # 300
@@ -352,9 +326,50 @@ class Player(py.sprite.Sprite):
 
     def update(self, dt):
         self.dt = dt
-        self.ySort = self.rect.centery
         self.walk()
         # self.animate()
+
+
+class Player(Character):
+
+    def __init__(self, walls, seeables, unseeables, *groups):
+        super().__init__('Player', walls, *groups)
+
+        self.centerScreenRect = self.image.get_frect(center=CENTER)
+        self.lineOfSight = LineOfSight(seeables, unseeables)
+        self.direction = vect((0, 0))
+        self.walls = walls
+        self.seeables = seeables
+        self.cooldown = 0
+        self.dt = None
+        self.ySort = self.rect.centery
+
+        # self.audioMixer = audioMixer
+
+    def input(self):
+        keys = py.key.get_pressed()
+        inputDir = vect()
+        if keys[K_w] or CONTROLLER.getJoystick('Up'):
+            inputDir.y = -1
+            self.facing = 'back'
+        if keys[K_s] or CONTROLLER.getJoystick('Down'):
+            inputDir.y = 1
+            self.facing = 'front'
+        if keys[K_a] or CONTROLLER.getJoystick('Left'):
+            inputDir.x = -1
+            self.facing = 'left'
+        if keys[K_d] or CONTROLLER.getJoystick('Right'):
+            inputDir.x = 1
+            self.facing = 'right'
+        if inputDir:
+            inputDir.normalize_ip()
+            # if not py.mixer.get_busy():
+            #     self.audioMixer.playSound('footsteps')
+        self.direction = inputDir
+
+    def update(self, dt):
+        super().update(dt)
+        self.ySort = self.rect.centery
 
 
 def tileMapSetup(allSprites, walls, unseeables, seeables):
@@ -363,12 +378,17 @@ def tileMapSetup(allSprites, walls, unseeables, seeables):
     bgGroup = py.sprite.Group()
 
     for layer in map.layers:
-        if layer.id != 3:
+
+        if layer.id < 3:
             for x, y, surface in layer.tiles():
                 Tile((x * 64, y * 64), surface, bgGroup)
     for object in map.objects:
-        Tile((object.x, object.y), py.Surface((object.width, object.height)), walls, seeables,
-             properties='CollisionRectangles')
+        if object.properties['Seeable']:
+            Tile((object.x, object.y), py.Surface((object.width, object.height)), seeables,
+                 properties='CollisionRectangles')
+        else:
+            Tile((object.x, object.y), py.Surface((object.width, object.height)), walls,
+                 properties='CollisionRectangles')
 
     allSprites.addBg(bgGroup)
 
@@ -381,9 +401,9 @@ def debugMapSetup(allSprites, walls, unseeables, seeables):
     wall.fill('red')
     wall2.fill('red')
 
-    CollisionTile((64, 378), wall2, walls, seeables)
-    CollisionTile((200, 173), wall, walls, seeables)
-    CollisionTile((300, 325), x, walls, unseeables)
+    CollisionTile((677, 1585), wall2, walls, seeables)
+    CollisionTile((813, 1380), wall, walls, seeables)
+    CollisionTile((913, 1532), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
     # CollisionTile((89, 320), wall, walls)
     # CollisionTile((200, 320), wall, walls)
@@ -399,13 +419,13 @@ def main():
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
 
-    tileMapSetup(allSprites, walls, unseeables, seeables)
+    debugMapSetup(allSprites, walls, unseeables, seeables)
 
     charcter = Player(walls, seeables, unseeables)
-    charcter.rect.center = [100, 100]
+    charcter.rect.center = [613, 1207]
     charcter.hitBox.center = [613, 1207]
 
-    allSprites.add(charcter, walls)
+    allSprites.add(charcter, walls, seeables)
 
     while running:
         dt = rr.tick(120) / 1000
@@ -415,6 +435,8 @@ def main():
                 running = False
         allSprites.update(dt)
         allSprites.cDraw(win, charcter)
+
+        py.display.set_caption(f"FPS: {str(round(rr.get_fps()))}")
 
         py.display.update()
 
