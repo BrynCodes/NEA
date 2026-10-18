@@ -1,3 +1,5 @@
+import re
+from os import listdir
 from pathlib import Path
 
 import pygame as py
@@ -253,24 +255,30 @@ class LineOfSight:
         win.blit(self.drawSurface, (0, 0))
 
 
+class Gun:
+    pass
+
+
 class Character(py.sprite.Sprite):
 
     def __init__(self, dirName, walls, *groups):
         super().__init__(*groups)
-        # directory = base_path / dirName
-        #
-        # self.images = {'front': dict(), 'left': dict(), 'right': dict(), 'back': dict()}
-        # for file, type, i in zip(listdir(directory), cycle((1, 'idle', 2)), range(12)):
-        #     self.images[tuple(self.images.keys())[i // 3]].update(
-        #         {type: py.transform.scale_by(py.image.load(f'{directory}/{file}').convert_alpha(), 2)})
+        path = ASSETSPATH / f'Characters/{dirName}'
 
-        self.facing = 'front'
+        self.idleImages = {'N': [], 'S': [], 'E': [], 'W': []}
+        for file in listdir(path):
+            if re.search('IDLE', file):
+                for direction, array in self.idleImages.items():
+                    if re.search(f'_{direction}_', file):
+                        array.append(py.image.load(f'{path}/{file}').convert_alpha())
 
-        # self.animationCount = 0
-        # self.image = self.images[self.facing]['idle']
+        self.facing = 'N'
 
-        self.image = py.Surface((64, 64))
-        self.image.fill('blue')
+        self.animationCount = 0
+        self.image = self.idleImages[self.facing][0]
+
+        # self.image = py.Surface((64, 64))
+        # self.image.fill('blue')
 
         self.rect: py.FRect = self.image.get_frect(center=(0, 0))
         self.hitBox = self.rect
@@ -309,17 +317,15 @@ class Character(py.sprite.Sprite):
         self.collisionCheck('y')
 
     def animate(self):
+        self.animationCount += 3 * self.dt
         if self.direction:
-            self.animationCount += 8 * self.dt
-            order = (1, 'idle', 2, 'idle')
-            if self.animationCount >= 3:
-                self.animationCount = 0
-
-            self.image = self.images[self.facing][order[round(self.animationCount)]]
+            pass
 
         else:
-            self.animationCount = 0
-            self.image = self.images[self.facing]['idle']
+            if self.animationCount >= 1.5:
+                self.animationCount = 0
+
+            self.image = self.idleImages[self.facing][round(self.animationCount)]
 
     def resetWalls(self, walls):
         self.walls = walls
@@ -327,7 +333,7 @@ class Character(py.sprite.Sprite):
     def update(self, dt):
         self.dt = dt
         self.walk()
-        # self.animate()
+        self.animate()
 
 
 class Player(Character):
@@ -351,16 +357,16 @@ class Player(Character):
         inputDir = vect()
         if keys[K_w] or CONTROLLER.getJoystick('Up'):
             inputDir.y = -1
-            self.facing = 'back'
+            self.facing = 'N'
         if keys[K_s] or CONTROLLER.getJoystick('Down'):
             inputDir.y = 1
-            self.facing = 'front'
+            self.facing = 'S'
         if keys[K_a] or CONTROLLER.getJoystick('Left'):
             inputDir.x = -1
-            self.facing = 'left'
+            self.facing = 'W'
         if keys[K_d] or CONTROLLER.getJoystick('Right'):
             inputDir.x = 1
-            self.facing = 'right'
+            self.facing = 'E'
         if inputDir:
             inputDir.normalize_ip()
             # if not py.mixer.get_busy():
