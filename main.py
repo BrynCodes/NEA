@@ -1,7 +1,7 @@
 import re
+from math import atan2, degrees
 from os import listdir
 from pathlib import Path
-from math import atan2, degrees
 
 import pygame as py
 from pygame import Vector2 as vect
@@ -263,32 +263,34 @@ class Gun(py.sprite.Sprite):
 
         self.character = character
         self.dt = None
-        self.image = py.Surface((32, 16))
+        self.image = py.Surface((32, 16)).convert_alpha()
         self.image.fill('Brown')
-        self.pos = self.character.onScreenPos.center + vect(48,0)
+        self.OGimage = self.image.copy()
+        self.pos = self.character.onScreenPos.center + vect(48, 0)
         self.rect = self.image.get_frect(center=self.pos)
         self.onScreenPos = self.image.get_frect(center=self.pos)
 
         self.ySort = self.rect.centery
         self.properties = []
-        self.direction = vect(48,0)
+        self.direction = vect(48, 0)
 
     def updateScreenPos(self, offset):
         self.onScreenPos.center = self.character.onScreenPos.center + self.direction
         return self.onScreenPos
 
+
     def update(self, dt):
         self.dt = dt
         self.direction = vect()
-        self.direction.from_polar((48,degrees(atan2(*(vect(CENTER)-vect(py.mouse.get_pos()))))))
-
-
-
+        tempVect = vect(py.mouse.get_pos()) - vect(CENTER)
+        angle = degrees(atan2(tempVect.y, tempVect.x))
+        self.direction.from_polar((60, angle))
+        self.image = py.transform.rotate(self.OGimage, -angle)
 
 
 class Character(py.sprite.Sprite):
 
-    def __init__(self, walls, dirName='',pos = (0,0), *groups):
+    def __init__(self, walls, dirName='', pos=(0, 0), *groups):
         super().__init__(*groups)
 
         self.facing = 'N'
@@ -422,6 +424,9 @@ class Player(Character):
             #     self.audioMixer.playSound('footsteps')
         self.direction = inputDir
 
+    def gunControls(self):
+        pass
+
 
     def update(self, dt):
         super().update(dt)
@@ -480,10 +485,10 @@ def main():
     player = Player(walls, seeables, unseeables)
     player.rect.center = [613, 1207]
 
-    character = Character(walls,'',(900, 1200))
-    gun= Gun(player)
+    character = Character(walls, '', (900, 1200))
+    gun = Gun(character)
 
-    allSprites.add(player, walls, seeables, character,gun)
+    allSprites.add(player, walls, seeables, character, gun)
 
     while running:
         dt = rr.tick(120) / 1000
