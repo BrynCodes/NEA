@@ -1,6 +1,7 @@
 import re
 from os import listdir
 from pathlib import Path
+from math import atan2, degrees
 
 import pygame as py
 from pygame import Vector2 as vect
@@ -32,7 +33,7 @@ class Group(py.sprite.Group):
     def __init__(self):
         super().__init__()
         self.offset = vect()
-        self.halfScreenSize = [i // 2 for i in py.display.get_window_size()]
+        self.halfScreenSize = CENTER
         self.bg = None
         self.char = None
 
@@ -51,7 +52,7 @@ class Group(py.sprite.Group):
 
         for spr in sorted(self.sprites(), key=lambda sprite: sprite.ySort):
             if spr == target:
-                win.blit(spr.image, spr.centerScreenRect)
+                win.blit(spr.image, spr.onScreenPos)
 
             elif spr.properties == 'CollisionRectangles':
                 spr.updateScreenPos(self.offset)
@@ -255,37 +256,79 @@ class LineOfSight:
         win.blit(self.drawSurface, (0, 0))
 
 
-class Gun:
-    pass
+class Gun(py.sprite.Sprite):
+
+    def __init__(self, character, *groups):
+        super().__init__(*groups)
+
+        self.character = character
+        self.dt = None
+        self.image = py.Surface((32, 16))
+        self.image.fill('Brown')
+        self.pos = self.character.onScreenPos.center + vect(48,0)
+        self.rect = self.image.get_frect(center=self.pos)
+        self.onScreenPos = self.image.get_frect(center=self.pos)
+
+        self.ySort = self.rect.centery
+        self.properties = []
+        self.direction = vect(48,0)
+
+    def updateScreenPos(self, offset):
+        self.onScreenPos.center = self.character.onScreenPos.center + self.direction
+        return self.onScreenPos
+
+    def update(self, dt):
+        self.dt = dt
+        self.direction = vect()
+        self.direction.from_polar((48,degrees(atan2(*(vect(CENTER)-vect(py.mouse.get_pos()))))))
+
+
+
 
 
 class Character(py.sprite.Sprite):
 
-    def __init__(self, dirName, walls, *groups):
+    def __init__(self, walls, dirName='',pos = (0,0), *groups):
         super().__init__(*groups)
-        path = ASSETSPATH / f'Characters/{dirName}'
-
-        self.idleImages = {'N': [], 'S': [], 'E': [], 'W': []}
-        for file in listdir(path):
-            if re.search('IDLE', file):
-                for direction, array in self.idleImages.items():
-                    if re.search(f'_{direction}_', file):
-                        array.append(py.image.load(f'{path}/{file}').convert_alpha())
 
         self.facing = 'N'
 
-        self.animationCount = 0
-        self.image = self.idleImages[self.facing][0]
+        if dirName:
+            self.idleImages = {'N': [], 'S': [], 'E': [], 'W': []}
+            self.walkingImages = {'N': [], 'S': [], 'E': [], 'W': []}
+            path = ASSETSPATH / f'Characters/{dirName}'
 
-        # self.image = py.Surface((64, 64))
-        # self.image.fill('blue')
+            for file in listdir(path):
+                if re.search('IDLE', file):
+                    self.imageGet(path, file, self.idleImages)
+                elif re.search('WALKING', file):
+                    self.imageGet(path, file, self.walkingImages)
 
-        self.rect: py.FRect = self.image.get_frect(center=(0, 0))
+            self.animationCount = 0
+            self.image = self.idleImages[self.facing][0]
+            self.animation = True
+        else:
+
+            self.image = py.Surface((64, 64))
+            self.image.fill('light blue')
+            self.animation = False
+
+        self.rect: py.FRect = self.image.get_frect(center=pos)
+        self.onScreenPos = self.image.get_frect(center=pos)
+
         self.hitBox = self.rect
 
         self.direction = vect((0, 0))
         self.walls = walls
         self.dt = None
+        self.ySort = self.rect.centery
+        self.properties = []
+
+    @staticmethod
+    def imageGet(path, file, imageDict):
+        for direction, array in imageDict.items():
+            if re.search(f'_{direction}_', file):
+                array.append(py.image.load(f'{path}/{file}').convert_alpha())
 
     def input(self):
         pass
@@ -317,15 +360,25 @@ class Character(py.sprite.Sprite):
         self.collisionCheck('y')
 
     def animate(self):
-        self.animationCount += 3 * self.dt
         if self.direction:
-            pass
+            self.animationCount += 8 * self.dt
+
+            if self.animationCount >= 3.5:
+                self.animationCount = 0
+
+            self.image = self.walkingImages[self.facing][round(self.animationCount)]
 
         else:
+            self.animationCount += 3 * self.dt
+
             if self.animationCount >= 1.5:
                 self.animationCount = 0
 
             self.image = self.idleImages[self.facing][round(self.animationCount)]
+
+    def updateScreenPos(self, offset):
+        self.onScreenPos.topleft = self.rect.topleft - offset
+        return self.onScreenPos
 
     def resetWalls(self, walls):
         self.walls = walls
@@ -333,23 +386,19 @@ class Character(py.sprite.Sprite):
     def update(self, dt):
         self.dt = dt
         self.walk()
-        self.animate()
+        if self.animation:
+            self.animate()
 
 
 class Player(Character):
 
     def __init__(self, walls, seeables, unseeables, *groups):
-        super().__init__('Player', walls, *groups)
+        super().__init__(walls, 'Player', *groups)
 
-        self.centerScreenRect = self.image.get_frect(center=CENTER)
         self.lineOfSight = LineOfSight(seeables, unseeables)
-        self.direction = vect((0, 0))
+        self.onScreenPos.center = CENTER
         self.walls = walls
         self.seeables = seeables
-        self.cooldown = 0
-        self.dt = None
-        self.ySort = self.rect.centery
-
         # self.audioMixer = audioMixer
 
     def input(self):
@@ -372,6 +421,7 @@ class Player(Character):
             # if not py.mixer.get_busy():
             #     self.audioMixer.playSound('footsteps')
         self.direction = inputDir
+
 
     def update(self, dt):
         super().update(dt)
@@ -427,11 +477,13 @@ def main():
 
     debugMapSetup(allSprites, walls, unseeables, seeables)
 
-    charcter = Player(walls, seeables, unseeables)
-    charcter.rect.center = [613, 1207]
-    charcter.hitBox.center = [613, 1207]
+    player = Player(walls, seeables, unseeables)
+    player.rect.center = [613, 1207]
 
-    allSprites.add(charcter, walls, seeables)
+    character = Character(walls,'',(900, 1200))
+    gun= Gun(player)
+
+    allSprites.add(player, walls, seeables, character,gun)
 
     while running:
         dt = rr.tick(120) / 1000
@@ -440,7 +492,7 @@ def main():
             if event.type == py.QUIT:
                 running = False
         allSprites.update(dt)
-        allSprites.cDraw(win, charcter)
+        allSprites.cDraw(win, player)
 
         py.display.set_caption(f"FPS: {str(round(rr.get_fps()))}")
 
