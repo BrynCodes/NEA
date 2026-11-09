@@ -278,11 +278,15 @@ class Gun(py.sprite.Sprite):
         self.onScreenPos.center = self.character.onScreenPos.center + self.direction
         return self.onScreenPos
 
-
     def update(self, dt):
+        if type(self.character) == Player:
+            target = py.mouse.get_pos()
+        else:
+            target = CENTER
+
         self.dt = dt
         self.direction = vect()
-        tempVect = vect(py.mouse.get_pos()) - vect(CENTER)
+        tempVect = vect(target) - vect(self.character.onScreenPos.center)
         angle = degrees(atan2(tempVect.y, tempVect.x))
         self.direction.from_polar((60, angle))
         self.image = py.transform.rotate(self.OGimage, -angle)
@@ -290,7 +294,7 @@ class Gun(py.sprite.Sprite):
 
 class Character(py.sprite.Sprite):
 
-    def __init__(self, walls, dirName='', pos=(0, 0), *groups):
+    def __init__(self, walls, player, dirName='', pos=(0, 0), *groups):
         super().__init__(*groups)
 
         self.facing = 'N'
@@ -325,6 +329,7 @@ class Character(py.sprite.Sprite):
         self.dt = None
         self.ySort = self.rect.centery
         self.properties = []
+        self.player = Player
 
     @staticmethod
     def imageGet(path, file, imageDict):
@@ -395,7 +400,7 @@ class Character(py.sprite.Sprite):
 class Player(Character):
 
     def __init__(self, walls, seeables, unseeables, *groups):
-        super().__init__(walls, 'Player', *groups)
+        super().__init__(walls, None, 'Player', *groups)
 
         self.lineOfSight = LineOfSight(seeables, unseeables)
         self.onScreenPos.center = CENTER
@@ -423,10 +428,6 @@ class Player(Character):
             # if not py.mixer.get_busy():
             #     self.audioMixer.playSound('footsteps')
         self.direction = inputDir
-
-    def gunControls(self):
-        pass
-
 
     def update(self, dt):
         super().update(dt)
@@ -485,8 +486,8 @@ def main():
     player = Player(walls, seeables, unseeables)
     player.rect.center = [613, 1207]
 
-    character = Character(walls, '', (900, 1200))
-    gun = Gun(character)
+    character = Character(walls, player, '', (900, 1200))
+    gun = Gun(player)
 
     allSprites.add(player, walls, seeables, character, gun)
 
