@@ -256,40 +256,75 @@ class LineOfSight:
         win.blit(self.drawSurface, (0, 0))
 
 
-class Gun(py.sprite.Sprite):
+class Bullet(py.sprite.Sprite):
 
-    def __init__(self, character, *groups):
+    def __init__(self, direction, pos, angle, dt, *groups):
         super().__init__(*groups)
 
+        self.dt = dt
+        self.direction = direction
+        self.pos = pos
+
+        self.image = py.Surface((8, 4)).convert_alpha()
+        self.image.fill('orange')
+        self.rect = self.image.get_frect(center=self.pos)
+        self.onScreenPos = self.image.get_frect(center=self.pos)
+        self.ySort = self.rect.centery
+        self.properties = []
+        self.image = py.transform.rotate(self.image, -angle)
+
+    def updateScreenPos(self, offset):
+        speed = 1000
+        self.onScreenPos.center += self.direction * self.dt * speed
+        return self.onScreenPos
+
+    def update(self, dt):
+        self.dt = dt
+
+
+
+class Gun(py.sprite.Sprite):
+
+    def __init__(self, character, allSprites, *groups):
+        super().__init__(allSprites, *groups)
+
+        self.angle = 0
+        self.allSprites = allSprites
         self.character = character
         self.dt = None
         self.image = py.Surface((32, 16)).convert_alpha()
         self.image.fill('Brown')
         self.OGimage = self.image.copy()
-        self.pos = self.character.onScreenPos.center + vect(48, 0)
+        self.pos = self.character.onScreenPos.center + vect(60, 0)
         self.rect = self.image.get_frect(center=self.pos)
         self.onScreenPos = self.image.get_frect(center=self.pos)
 
         self.ySort = self.rect.centery
         self.properties = []
-        self.direction = vect(48, 0)
+        self.direction = vect(60, 0)
 
     def updateScreenPos(self, offset):
         self.onScreenPos.center = self.character.onScreenPos.center + self.direction
         return self.onScreenPos
 
-    def update(self, dt):
-        if type(self.character) == Player:
-            target = py.mouse.get_pos()
-        else:
-            target = CENTER
-
-        self.dt = dt
+    def rotateToTarget(self, target):
         self.direction = vect()
         tempVect = vect(target) - vect(self.character.onScreenPos.center)
-        angle = degrees(atan2(tempVect.y, tempVect.x))
-        self.direction.from_polar((60, angle))
-        self.image = py.transform.rotate(self.OGimage, -angle)
+        self.angle = degrees(atan2(tempVect.y, tempVect.x))
+        self.direction.from_polar((60, self.angle))
+        self.image = py.transform.rotate(self.OGimage, -self.angle)
+
+    def fire(self):
+        tempVect = vect()
+        tempVect.from_polar((76, self.angle))
+        Bullet(self.direction.normalize(), tempVect + self.character.onScreenPos.center, self.angle, self.dt,
+               self.allSprites)
+
+
+
+
+    def update(self, dt):
+        self.dt = dt
 
 
 class Character(py.sprite.Sprite):
@@ -330,6 +365,7 @@ class Character(py.sprite.Sprite):
         self.ySort = self.rect.centery
         self.properties = []
         self.player = Player
+        self.gun = Gun(self, *groups)
 
     @staticmethod
     def imageGet(path, file, imageDict):
@@ -338,7 +374,7 @@ class Character(py.sprite.Sprite):
                 array.append(py.image.load(f'{path}/{file}').convert_alpha())
 
     def input(self):
-        pass
+        self.gun.rotateToTarget(CENTER)
 
     def collisionCheck(self, axis):
         for wall in py.sprite.spritecollide(self, self.walls, False):
@@ -358,7 +394,6 @@ class Character(py.sprite.Sprite):
 
     def walk(self):
         speed = 200  # 300
-        self.input()
         self.rect.centerx += self.direction.x * speed * self.dt
         self.hitBox.centerx = self.rect.centerx
         self.collisionCheck('x')
@@ -392,6 +427,7 @@ class Character(py.sprite.Sprite):
 
     def update(self, dt):
         self.dt = dt
+        self.input()
         self.walk()
         if self.animation:
             self.animate()
@@ -400,7 +436,7 @@ class Character(py.sprite.Sprite):
 class Player(Character):
 
     def __init__(self, walls, seeables, unseeables, *groups):
-        super().__init__(walls, None, 'Player', *groups)
+        super().__init__(walls, None, 'Player', (613, 1207), *groups)
 
         self.lineOfSight = LineOfSight(seeables, unseeables)
         self.onScreenPos.center = CENTER
@@ -408,7 +444,14 @@ class Player(Character):
         self.seeables = seeables
         # self.audioMixer = audioMixer
 
+    def gunControls(self):
+        self.gun.rotateToTarget(py.mouse.get_pos())
+        if py.mouse.get_just_pressed()[0]:
+            self.gun.fire()
+
+
     def input(self):
+        self.gunControls()
         keys = py.key.get_pressed()
         inputDir = vect()
         if keys[K_w] or CONTROLLER.getJoystick('Up'):
@@ -483,13 +526,11 @@ def main():
 
     debugMapSetup(allSprites, walls, unseeables, seeables)
 
-    player = Player(walls, seeables, unseeables)
-    player.rect.center = [613, 1207]
+    player = Player(walls, seeables, unseeables, allSprites)
 
-    character = Character(walls, player, '', (900, 1200))
-    gun = Gun(player)
+    character = Character(walls, player, '', (900, 1200), allSprites)
 
-    allSprites.add(player, walls, seeables, character, gun)
+    allSprites.add(walls, seeables, character)
 
     while running:
         dt = rr.tick(120) / 1000
