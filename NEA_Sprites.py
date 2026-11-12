@@ -1,6 +1,5 @@
 from NEA_constants import *
-from NEA_UI import LineOfSight
-
+from NEA_UI import LineOfSight, HealthBar
 
 
 class Controller:
@@ -37,13 +36,18 @@ class Bullet(py.sprite.Sprite):
         speed = 2000
         self.rect.center += self.direction * self.dt * speed
         self.onScreenPos.topleft = self.rect.topleft - offset
-
         return self.onScreenPos
+
+    def onScreen(self):
+        if self.onScreenPos.left < 0 or self.onScreenPos.right > SCREENSIZE[0] or self.onScreenPos.top < 0 or self.onScreenPos.bottom > SCREENSIZE[1]:
+            return True
+        return False
 
     def update(self, dt):
         self.dt = dt
-        if py.sprite.spritecollideany(self, self.walls):
+        if py.sprite.spritecollideany(self, self.walls) or self.onScreen():
             self.kill()
+
 
 
 class Gun(py.sprite.Sprite):
@@ -62,7 +66,7 @@ class Gun(py.sprite.Sprite):
         self.rect = self.image.get_frect(center=self.pos)
         self.onScreenPos = self.image.get_frect(center=self.pos)
 
-        self.ySort = self.rect.centery
+        self.ySort = 10000
         self.properties = []
         self.direction = vect(60, 0)
 
@@ -89,7 +93,7 @@ class Gun(py.sprite.Sprite):
 
 class Character(py.sprite.Sprite):
 
-    def __init__(self, walls, player, dirName='', pos=(0, 0), *groups):
+    def __init__(self, walls, player, dirName, pos,health, *groups):
         super().__init__(*groups)
 
         self.facing = 'N'
@@ -124,8 +128,10 @@ class Character(py.sprite.Sprite):
         self.dt = None
         self.ySort = self.rect.centery
         self.properties = []
-        self.player = Player
+        self.player = player
         self.gun = Gun(self, *groups)
+        self.fullHealth = health
+        self.health = health
 
     @staticmethod
     def imageGet(path, file, imageDict):
@@ -151,6 +157,7 @@ class Character(py.sprite.Sprite):
                     elif self.direction.y < 0:
                         self.hitBox.top = wall.hitbox.bottom
                     self.rect.centery = self.hitBox.centery
+
 
     def walk(self):
         speed = 200  # 300
@@ -193,10 +200,18 @@ class Character(py.sprite.Sprite):
             self.animate()
 
 
+class Enemy(Character):
+
+    def __init__(self,walls, player,allSprites, dirName='', pos=(0, 0),health = 100, *groups):
+        super().__init__(walls, player, dirName, pos, health,allSprites,*groups)
+        self.healthBar = HealthBar(self,allSprites)
+
+
+
 class Player(Character):
 
     def __init__(self, walls, seeables, unseeables, *groups):
-        super().__init__(walls, None, 'Player', (613, 1207), *groups)
+        super().__init__(walls, None, 'Player', (613, 1207), 100,*groups)
 
         self.lineOfSight = LineOfSight(seeables, unseeables)
         self.onScreenPos.center = CENTER

@@ -165,3 +165,34 @@ class LineOfSight:
         self.blockUnseeables(lines)
 
         win.blit(self.drawSurface, (0, 0))
+
+class HealthBar(py.sprite.Sprite):
+
+    def __init__(self,character,*groups):
+        super().__init__(*groups)
+
+        self.ogImage = py.Surface((64,8)).convert_alpha()
+        self.image = self.ogImage.copy()
+        self.image.fill('#848484')
+        self.dt = None
+        self.ySort = 1000
+        self.properties = []
+        self.character = character
+        self.rect = self.image.get_frect(center = character.onScreenPos.midtop+ vect(0,-12))
+        self.onScreenPos = self.rect.copy()
+        self.healthPercent = 0.85
+        self.showHealth()
+
+    def showHealth(self):
+        self.image = self.ogImage.copy()
+        py.draw.rect(self.image, 'red', (2, 2, 60, 4))
+        py.draw.rect(self.image, 'green', (2, 2, 60 * self.healthPercent, 4))
+
+    def updateScreenPos(self, offset):
+        self.onScreenPos.center = self.character.onScreenPos.midtop + vect(0,-12)
+        return self.onScreenPos
+
+    def update(self,dt):
+        self.dt = dt
+        self.showHealth()
+
