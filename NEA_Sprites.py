@@ -61,7 +61,7 @@ class Gun(py.sprite.Sprite):
         self.dt = None
         self.image = py.Surface((32, 16)).convert_alpha()
         self.image.fill('Brown')
-        self.OGimage = self.image.copy()
+        self.ogImage = self.image.copy()
         self.pos = self.character.onScreenPos.center + vect(60, 0)
         self.rect = self.image.get_frect(center=self.pos)
         self.onScreenPos = self.image.get_frect(center=self.pos)
@@ -79,7 +79,7 @@ class Gun(py.sprite.Sprite):
         tempVect = vect(target) - vect(self.character.onScreenPos.center)
         self.angle = degrees(atan2(tempVect.y, tempVect.x))
         self.direction.from_polar((60, self.angle))
-        self.image = py.transform.rotate(self.OGimage, -self.angle)
+        self.image = py.transform.rotate(self.ogImage, -self.angle)
 
     def fire(self, walls, seeables):
         tempVect = vect()
@@ -112,10 +112,12 @@ class Character(py.sprite.Sprite):
 
             self.animationCount = 0
             self.image = self.idleImages[self.facing][0]
+            self.ogImage = self.image.copy()
             self.animation = True
         else:
 
             self.image = py.Surface((64, 64))
+            self.ogImage = self.image.copy()
             self.image.fill('light blue')
             self.animation = False
 
@@ -175,19 +177,15 @@ class Character(py.sprite.Sprite):
     def animate(self):
         if self.direction:
             self.animationCount += 8 * self.dt
-
             if self.animationCount >= 3.5:
                 self.animationCount = 0
-
             self.image = self.walkingImages[self.facing][round(self.animationCount)]
-
         else:
             self.animationCount += 3 * self.dt
-
             if self.animationCount >= 1.5:
                 self.animationCount = 0
-
             self.image = self.idleImages[self.facing][round(self.animationCount)]
+
 
     def updateScreenPos(self, offset):
         self.onScreenPos.topleft = self.rect.topleft - offset
@@ -216,8 +214,20 @@ class Enemy(Character):
     def input(self):
         self.playerVect = vect(CENTER) - self.onScreenPos.center
         self.playerAngle = self.facingVect.angle_to(self.playerVect)
-        if 80 > self.playerAngle > -80:
+        if 80 > self.playerAngle > -80 and self.playerVect.magnitude_squared() < 200000:
             self.gun.rotateToTarget(CENTER)
+
+    def animate(self):
+        if self.direction:
+            self.animationCount += 8 * self.dt
+            if self.animationCount >= 3.5:
+                self.animationCount = 0
+            self.ogImage = self.walkingImages[self.facing][round(self.animationCount)]
+        else:
+            self.animationCount += 3 * self.dt
+            if self.animationCount >= 1.5:
+                self.animationCount = 0
+            self.ogImage = self.idleImages[self.facing][round(self.animationCount)]
 
 
 class Player(Character):

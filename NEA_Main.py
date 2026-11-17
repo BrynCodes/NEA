@@ -1,5 +1,5 @@
-from NEA_Sprites import Player, Character, Enemy
-from NEA_Tiles import Tile, CollisionTile
+from NEA_Sprites import Player, Enemy
+from NEA_Tiles import CollisionTile
 from NEA_UI import *
 
 py.font.init()
@@ -90,7 +90,7 @@ def main():
 
     player = Player(walls, seeables, unseeables, allSprites)
 
-    character = Enemy(walls, player, allSprites,'', (900, 1200))
+    character = Enemy(walls, player, allSprites, 'Enemy', (900, 1200), 100, unseeables)
 
     allSprites.add(walls, seeables, character)
 

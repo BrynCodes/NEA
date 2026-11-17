@@ -1,5 +1,6 @@
 from NEA_Constants import *
 
+
 class LineOfSight:
 
     def __init__(self, seeables, unseeables):
@@ -82,6 +83,7 @@ class LineOfSight:
     def blockUnseeables(self, linePairs):
         for tile in self.unseeables:
             tile.image = tile.ogImage.copy()
+
             if self.onScreen((tile.onScreenPos.topleft, tile.onScreenPos.topright, tile.onScreenPos.bottomleft,
                               tile.onScreenPos.bottomright)):
                 for lines in linePairs:
@@ -151,7 +153,7 @@ class LineOfSight:
         if len(allCorners) > 2:
             py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), allCorners)  # 200
 
-        return zip(startOfShadowPoints, reversed(endOfShadowPoints))
+        return list(zip(startOfShadowPoints, reversed(endOfShadowPoints)))
 
     def update(self, win):
         self.drawSurface.fill(py.Color('#00000000'))
@@ -195,7 +197,7 @@ class HealthBar(py.sprite.Sprite):
 
     def update(self,dt):
         self.dt = dt
-        healthPercent = self.character.getHealth('p')
+        healthPercent = self.character.getHealth('percent')
         if self.healthPercent != healthPercent:
             if self.healthPercent > healthPercent and not self.healthDir:
                 self.healthDir = '-'
