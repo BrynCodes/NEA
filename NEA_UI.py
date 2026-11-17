@@ -1,4 +1,4 @@
-from NEA_constants import *
+from NEA_Constants import *
 
 class LineOfSight:
 
@@ -171,6 +171,7 @@ class HealthBar(py.sprite.Sprite):
     def __init__(self,character,*groups):
         super().__init__(*groups)
 
+        self.healthDir = ''
         self.ogImage = py.Surface((64,8)).convert_alpha()
         self.image = self.ogImage.copy()
         self.image.fill('#848484')
@@ -180,7 +181,7 @@ class HealthBar(py.sprite.Sprite):
         self.character = character
         self.rect = self.image.get_frect(center = character.onScreenPos.midtop+ vect(0,-12))
         self.onScreenPos = self.rect.copy()
-        self.healthPercent = 0.85
+        self.healthPercent = self.character.getHealth('percent')
         self.showHealth()
 
     def showHealth(self):
@@ -194,5 +195,23 @@ class HealthBar(py.sprite.Sprite):
 
     def update(self,dt):
         self.dt = dt
-        self.showHealth()
+        healthPercent = self.character.getHealth('p')
+        if self.healthPercent != healthPercent:
+            if self.healthPercent > healthPercent and not self.healthDir:
+                self.healthDir = '-'
+            elif self.healthPercent < healthPercent and not self.healthDir:
+                self.healthDir = '+'
+
+            if self.healthDir == '-':
+                self.healthPercent -= dt * 2
+                if self.healthPercent <= healthPercent:
+                    self.healthPercent = healthPercent
+                    self.healthDir = ''
+            elif self.healthDir == '+':
+                self.healthPercent += dt * 2
+                if self.healthPercent >= healthPercent:
+                    self.healthPercent = healthPercent
+                    self.healthDir = ''
+
+            self.showHealth()
 

@@ -1,4 +1,4 @@
-from NEA_constants import *
+from NEA_Constants import *
 from NEA_UI import LineOfSight, HealthBar
 
 
@@ -38,16 +38,16 @@ class Bullet(py.sprite.Sprite):
         self.onScreenPos.topleft = self.rect.topleft - offset
         return self.onScreenPos
 
-    def onScreen(self):
-        if self.onScreenPos.left < 0 or self.onScreenPos.right > SCREENSIZE[0] or self.onScreenPos.top < 0 or self.onScreenPos.bottom > SCREENSIZE[1]:
+    def offScreen(self):
+        if self.onScreenPos.left < 0 or self.onScreenPos.right > SCREENSIZE[
+            0] or self.onScreenPos.top < 0 or self.onScreenPos.bottom > SCREENSIZE[1]:
             return True
         return False
 
     def update(self, dt):
         self.dt = dt
-        if py.sprite.spritecollideany(self, self.walls) or self.onScreen():
+        if py.sprite.spritecollideany(self, self.walls) or self.offScreen():
             self.kill()
-
 
 
 class Gun(py.sprite.Sprite):
@@ -93,10 +93,11 @@ class Gun(py.sprite.Sprite):
 
 class Character(py.sprite.Sprite):
 
-    def __init__(self, walls, player, dirName, pos,health, *groups):
+    def __init__(self, walls, player, dirName, pos, health, *groups):
         super().__init__(*groups)
 
         self.facing = 'N'
+        self.facingVect = vect(0, -1)
 
         if dirName:
             self.idleImages = {'N': [], 'S': [], 'E': [], 'W': []}
@@ -139,8 +140,12 @@ class Character(py.sprite.Sprite):
             if re.search(f'_{direction}_', file):
                 array.append(py.image.load(f'{path}/{file}').convert_alpha())
 
-    def input(self):
-        self.gun.rotateToTarget(CENTER)
+    def getHealth(self, healthType):
+        if healthType == 'percent':
+            return self.health / self.fullHealth
+        elif healthType == 'full':
+            return self.fullHealth
+        return self.health
 
     def collisionCheck(self, axis):
         for wall in py.sprite.spritecollide(self, self.walls, False):
@@ -157,7 +162,6 @@ class Character(py.sprite.Sprite):
                     elif self.direction.y < 0:
                         self.hitBox.top = wall.hitbox.bottom
                     self.rect.centery = self.hitBox.centery
-
 
     def walk(self):
         speed = 200  # 300
@@ -202,16 +206,24 @@ class Character(py.sprite.Sprite):
 
 class Enemy(Character):
 
-    def __init__(self,walls, player,allSprites, dirName='', pos=(0, 0),health = 100, *groups):
-        super().__init__(walls, player, dirName, pos, health,allSprites,*groups)
-        self.healthBar = HealthBar(self,allSprites)
+    def __init__(self, walls, player, allSprites, dirName='', pos=(0, 0), health=100, *groups):
+        super().__init__(walls, player, dirName, pos, health, allSprites, *groups)
+        self.playerAngle = None
+        self.healthBar = HealthBar(self, allSprites)
+        self.vision = py.FRect()
+        self.playerVect = vect(CENTER) - self.onScreenPos.center
 
+    def input(self):
+        self.playerVect = vect(CENTER) - self.onScreenPos.center
+        self.playerAngle = self.facingVect.angle_to(self.playerVect)
+        if 80 > self.playerAngle > -80:
+            self.gun.rotateToTarget(CENTER)
 
 
 class Player(Character):
 
     def __init__(self, walls, seeables, unseeables, *groups):
-        super().__init__(walls, None, 'Player', (613, 1207), 100,*groups)
+        super().__init__(walls, None, 'Player', (613, 1207), 100, *groups)
 
         self.lineOfSight = LineOfSight(seeables, unseeables)
         self.onScreenPos.center = CENTER

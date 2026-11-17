@@ -1,4 +1,4 @@
-from NEA_constants import *
+from NEA_Constants import *
 
 class Tile(py.sprite.Sprite):
 
