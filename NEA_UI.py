@@ -83,6 +83,8 @@ class LineOfSight:
     def blockUnseeables(self, linePairs):
         for tile in self.unseeables:
             tile.image = tile.ogImage.copy()
+            tile.hidden = False
+            cut = False
 
             if self.onScreen((tile.onScreenPos.topleft, tile.onScreenPos.topright, tile.onScreenPos.bottomleft,
                               tile.onScreenPos.bottomright)):
@@ -90,6 +92,7 @@ class LineOfSight:
                     vects = []
                     points = []
                     clippedPoints = []
+
                     for line in lines:
                         vects.append(line[1] - line[0])
                         clippedPoint = self.clippedLineCalculation(tile, line)
@@ -98,9 +101,14 @@ class LineOfSight:
 
                     points += self.pointCheck(tile.onScreenPos, any(clippedPoints), *vects)
 
-                    if len(points) > 2:
+                    if len(points) > 2 and vect(CENTER - line[0]).magnitude_squared() < vect(
+                            CENTER - vect(tile.onScreenPos.center)).magnitude_squared():
                         arrangedPoints = self.arrangePoints(points.copy())
                         py.draw.polygon(tile.image, (0, 0, 0, 0), arrangedPoints)
+                        cut = True
+
+            if cut:
+                tile.hidden = py.mask.from_surface(tile.image).count() == 0
 
     @staticmethod
     def cornerCheckOrder(wall):
@@ -184,6 +192,8 @@ class HealthBar(py.sprite.Sprite):
         self.rect = self.image.get_frect(center = character.onScreenPos.midtop+ vect(0,-12))
         self.onScreenPos = self.rect.copy()
         self.healthPercent = self.character.getHealth('percent')
+        self.hidden = False
+        self.blank = py.Surface((64, 8), py.SRCALPHA)
         self.showHealth()
 
     def showHealth(self):
@@ -191,8 +201,15 @@ class HealthBar(py.sprite.Sprite):
         py.draw.rect(self.image, 'red', (2, 2, 60, 4))
         py.draw.rect(self.image, 'green', (2, 2, 60 * self.healthPercent, 4))
 
+    def applyVisibility(self):
+        if self.character.hidden:
+            self.image = self.blank
+        else:
+            self.showHealth()
+
     def updateScreenPos(self, offset):
         self.onScreenPos.center = self.character.onScreenPos.midtop + vect(0,-12)
+        self.applyVisibility()
         return self.onScreenPos
 
     def update(self,dt):
@@ -214,6 +231,3 @@ class HealthBar(py.sprite.Sprite):
                 if self.healthPercent >= healthPercent:
                     self.healthPercent = healthPercent
                     self.healthDir = ''
-
-            self.showHealth()
-

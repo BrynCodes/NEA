@@ -1,5 +1,5 @@
 from NEA_Sprites import Player, Enemy
-from NEA_Tiles import CollisionTile
+from NEA_Tiles import CollisionTile, Tile
 from NEA_UI import *
 
 py.font.init()
@@ -13,16 +13,26 @@ class Group(py.sprite.Group):
         self.halfScreenSize = CENTER
         self.bg = None
         self.char = None
+        self.specialGroup = py.sprite.Group()
 
     def addBg(self, group):
         self.bg = group
+
+    def addSpecial(self, sprite):
+        self.specialGroup.add(sprite)
 
     def camera(self, target):
         self.offset = vect(target.rect.center) - self.halfScreenSize
         self.offset.x = round(self.offset.x)
         self.offset.y = round(self.offset.y)
 
-    def cDraw(self, win, target):
+    def update(self, *args, **kwargs):
+        super().update(*args, **kwargs)
+        for specialObject in self.specialGroup:
+            specialObject.update(*args, **kwargs)
+
+    def cDraw(self, win, target, dt):
+        self.update(dt)
         self.camera(target)
         for bg in self.bg:
             win.blit(bg.image, bg.rect.topleft - self.offset)
@@ -37,6 +47,9 @@ class Group(py.sprite.Group):
             else:
                 win.blit(spr.image, spr.updateScreenPos(self.offset))
         target.lineOfSight.update(win)
+        for specialObject in self.specialGroup:
+            win.blit(specialObject.image, specialObject.updateScreenPos(self.offset))
+
 
 
 def tileMapSetup(allSprites, walls, unseeables, seeables):
@@ -63,14 +76,14 @@ def tileMapSetup(allSprites, walls, unseeables, seeables):
 def debugMapSetup(allSprites, walls, unseeables, seeables):
     wall = py.Surface((64, 128), SRCALPHA)
     wall2 = py.Surface((128, 64), SRCALPHA)
-    x = py.Surface((256, 64), SRCALPHA)
+    x = py.Surface((16, 64), SRCALPHA)
     x.fill('blue')
     wall.fill('red')
     wall2.fill('red')
 
-    CollisionTile((677, 1585), wall2, walls, seeables)
+    CollisionTile((677, 1085), wall2, walls, seeables)
     CollisionTile((813, 1380), wall, walls, seeables)
-    CollisionTile((913, 1532), x, walls, unseeables)
+    CollisionTile((953, 1532), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
     # CollisionTile((89, 320), wall, walls)
     # CollisionTile((200, 320), wall, walls)
@@ -100,8 +113,7 @@ def main():
         for event in py.event.get():
             if event.type == py.QUIT:
                 running = False
-        allSprites.update(dt)
-        allSprites.cDraw(win, player)
+        allSprites.cDraw(win, player, dt)
 
         py.display.set_caption(f"FPS: {str(round(rr.get_fps()))}")
 

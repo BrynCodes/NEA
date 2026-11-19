@@ -11,6 +11,7 @@ class Tile(py.sprite.Sprite):
         self.hitbox = self.rect.copy()
         self.ySort = self.rect.centery - extra.setdefault('overlapOffset', 0)
         self.onScreenPos = self.image.get_frect(topleft=pos)
+        self.hidden = False
 
     def updateScreenPos(self, offset):
         self.onScreenPos.topleft = self.rect.topleft - offset

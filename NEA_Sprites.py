@@ -31,6 +31,7 @@ class Bullet(py.sprite.Sprite):
         self.properties = []
         self.image = py.transform.rotate(self.image, -angle)
         self.walls = walls
+        self.hidden = False
 
     def updateScreenPos(self, offset):
         speed = 2000
@@ -53,13 +54,14 @@ class Bullet(py.sprite.Sprite):
 class Gun(py.sprite.Sprite):
 
     def __init__(self, character, allSprites, *groups):
-        super().__init__(allSprites, *groups)
+        super().__init__(*groups)
 
         self.angle = 0
         self.allSprites = allSprites
         self.character = character
         self.dt = None
         self.image = py.Surface((32, 16)).convert_alpha()
+        self.blank = py.Surface((32, 16), py.SRCALPHA)
         self.image.fill('Brown')
         self.ogImage = self.image.copy()
         self.pos = self.character.onScreenPos.center + vect(60, 0)
@@ -93,8 +95,8 @@ class Gun(py.sprite.Sprite):
 
 class Character(py.sprite.Sprite):
 
-    def __init__(self, walls, player, dirName, pos, health, *groups):
-        super().__init__(*groups)
+    def __init__(self, walls, player, dirName, pos, health, allSprites, *groups):
+        super().__init__(allSprites, *groups)
 
         self.facing = 'N'
         self.facingVect = vect(0, -1)
@@ -132,9 +134,11 @@ class Character(py.sprite.Sprite):
         self.ySort = self.rect.centery
         self.properties = []
         self.player = player
-        self.gun = Gun(self, *groups)
+        self.gun = Gun(self, allSprites, *groups)
+        allSprites.addSpecial(self.gun)
         self.fullHealth = health
         self.health = health
+        self.hidden = False
 
     @staticmethod
     def imageGet(path, file, imageDict):
@@ -207,7 +211,8 @@ class Enemy(Character):
     def __init__(self, walls, player, allSprites, dirName='', pos=(0, 0), health=100, *groups):
         super().__init__(walls, player, dirName, pos, health, allSprites, *groups)
         self.playerAngle = None
-        self.healthBar = HealthBar(self, allSprites)
+        self.healthBar = HealthBar(self)
+        allSprites.addSpecial(self.healthBar)
         self.vision = py.FRect()
         self.playerVect = vect(CENTER) - self.onScreenPos.center
 
