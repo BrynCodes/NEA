@@ -61,8 +61,8 @@ class Gun(py.sprite.Sprite):
         self.character = character
         self.dt = None
         self.image = py.Surface((32, 16)).convert_alpha()
-        self.blank = py.Surface((32, 16), py.SRCALPHA)
         self.image.fill('Brown')
+        self.unrotatedImage = self.image.copy()
         self.ogImage = self.image.copy()
         self.pos = self.character.onScreenPos.center + vect(60, 0)
         self.rect = self.image.get_frect(center=self.pos)
@@ -81,7 +81,10 @@ class Gun(py.sprite.Sprite):
         tempVect = vect(target) - vect(self.character.onScreenPos.center)
         self.angle = degrees(atan2(tempVect.y, tempVect.x))
         self.direction.from_polar((60, self.angle))
-        self.image = py.transform.rotate(self.ogImage, -self.angle)
+        self.ogImage = py.transform.rotate(self.unrotatedImage, -self.angle)
+        self.image = self.ogImage.copy()
+        self.rect.size = self.ogImage.get_size()
+        self.onScreenPos.size = self.ogImage.get_size()
 
     def fire(self, walls, seeables):
         tempVect = vect()
