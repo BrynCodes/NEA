@@ -16,22 +16,21 @@ CONTROLLER = Controller()
 
 class Bullet(py.sprite.Sprite):
 
-    def __init__(self, direction, pos, angle, dt, walls, *groups):
+    def __init__(self, direction, pos, angle, dt, walls, frames, *groups):
         super().__init__(*groups)
 
         self.dt = dt
         self.direction = direction
         self.pos = pos
-
-        self.image = py.Surface((8, 4)).convert_alpha()
-        self.image.fill('orange')
+        self.frames = [py.transform.rotate(f, -angle) for f in frames]
+        self.image = self.frames[0]
         self.rect = self.image.get_frect(center=self.pos)
         self.onScreenPos = self.image.get_frect(center=self.pos)
         self.ySort = self.rect.centery
         self.properties = []
-        self.image = py.transform.rotate(self.image, -angle)
         self.walls = walls
         self.hidden = False
+        self.animationCount = 0
 
     def updateScreenPos(self, offset):
         speed = 2000
@@ -45,8 +44,16 @@ class Bullet(py.sprite.Sprite):
             return True
         return False
 
+    def animate(self):
+        self.animationCount += 8 * self.dt
+        if self.animationCount >= 3.5:
+            self.animationCount = 0
+        self.image = self.frames[int(self.animationCount)]
+
+
     def update(self, dt):
         self.dt = dt
+        self.animate()
         if py.sprite.spritecollideany(self, self.walls) or self.offScreen():
             self.kill()
 
@@ -56,6 +63,7 @@ class Gun(py.sprite.Sprite):
     def __init__(self, character, allSprites, *groups):
         super().__init__(*groups)
 
+        imagePath = ASSETSPATH / 'Gun'
         self.angle = 0
         self.allSprites = allSprites
         self.character = character
@@ -67,6 +75,7 @@ class Gun(py.sprite.Sprite):
         self.pos = self.character.onScreenPos.center + vect(60, 0)
         self.rect = self.image.get_frect(center=self.pos)
         self.onScreenPos = self.image.get_frect(center=self.pos)
+        self.bulletFrames = [py.image.load(imagePath / 'Bullet' / f'Bullet_{i}.png').convert_alpha() for i in range(4)]
 
         self.ySort = 10000
         self.properties = []
@@ -90,7 +99,7 @@ class Gun(py.sprite.Sprite):
         tempVect = vect()
         tempVect.from_polar((76, self.angle))
         Bullet(self.direction.normalize(), tempVect + self.character.rect.center, self.angle, self.dt,
-               walls, self.allSprites)
+               walls, self.bulletFrames, self.allSprites)
 
     def update(self, dt):
         self.dt = dt
@@ -222,7 +231,7 @@ class Enemy(Character):
     def input(self):
         self.playerVect = vect(CENTER) - self.onScreenPos.center
         self.playerAngle = self.facingVect.angle_to(self.playerVect)
-        if 80 > self.playerAngle > -80 and self.playerVect.magnitude_squared() < 200000:
+        if 80 > self.playerAngle > -80 and self.playerVect.magnitude_squared() < 100000:
             self.gun.rotateToTarget(CENTER)
 
     def animate(self):
