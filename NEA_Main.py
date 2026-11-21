@@ -54,7 +54,7 @@ class Group(py.sprite.Group):
 
 def tileMapSetup(allSprites, walls, unseeables, seeables):
     path = ASSETSPATH / 'Tilemaps'
-    map = load_pygame(path / 'untitled.tmx')
+    map = load_pygame(path / 'room_01_winding_corridor.tmx')
     bgGroup = py.sprite.Group()
 
     for layer in map.layers:
@@ -99,17 +99,17 @@ def main():
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
 
-    debugMapSetup(allSprites, walls, unseeables, seeables)
+    tileMapSetup(allSprites, walls, unseeables, seeables)
 
     player = Player(walls, seeables, unseeables, allSprites)
 
-    character = Enemy(walls, player, allSprites, 'Enemy', (900, 1200), 100, unseeables)
+    character = Enemy(walls, player, allSprites, 'Enemy', (2009, 371), 100, unseeables)
 
     allSprites.add(walls, seeables, character)
 
     while running:
         dt = rr.tick(120) / 1000
-        win.fill((86, 86, 86))
+        win.fill((26, 26, 26))
         for event in py.event.get():
             if event.type == py.QUIT:
                 running = False

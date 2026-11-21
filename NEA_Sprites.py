@@ -156,7 +156,7 @@ class Character(py.sprite.Sprite):
     def imageGet(path, file, imageDict):
         for direction, array in imageDict.items():
             if re.search(f'_{direction}_', file):
-                array.append(py.image.load(f'{path}/{file}').convert_alpha())
+                array.append(py.transform.scale_by(py.image.load(f'{path}/{file}').convert_alpha(), 1.2))
 
     def getHealth(self, healthType):
         if healthType == 'percent':
@@ -250,7 +250,7 @@ class Enemy(Character):
 class Player(Character):
 
     def __init__(self, walls, seeables, unseeables, *groups):
-        super().__init__(walls, None, 'Player', (613, 1207), 100, *groups)
+        super().__init__(walls, None, 'Player', (315, 315), 100, *groups)
 
         self.lineOfSight = LineOfSight(seeables, unseeables)
         self.onScreenPos.center = CENTER
