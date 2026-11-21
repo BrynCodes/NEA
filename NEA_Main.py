@@ -106,6 +106,7 @@ def main():
     character = Enemy(walls, player, allSprites, 'Enemy', (2009, 371), 100, unseeables)
 
     allSprites.add(walls, seeables, character)
+    hud = HUD(player)
 
     while running:
         dt = rr.tick(120) / 1000
@@ -114,6 +115,7 @@ def main():
             if event.type == py.QUIT:
                 running = False
         allSprites.cDraw(win, player, dt)
+        hud.update(dt, win)
 
         py.display.set_caption(f"FPS: {str(round(rr.get_fps()))}")
 

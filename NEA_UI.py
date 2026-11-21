@@ -1,5 +1,6 @@
 from NEA_Constants import *
 
+FILEPATH = ASSETSPATH / 'HUD'
 
 class LineOfSight:
 
@@ -176,22 +177,22 @@ class LineOfSight:
 
         win.blit(self.drawSurface, (0, 0))
 
+
 class HealthBar(py.sprite.Sprite):
 
-    def __init__(self,character,*groups):
+    def __init__(self, character, *groups):
         super().__init__(*groups)
 
-        self.healthDir = ''
-        self.ogImage = py.Surface((64,8)).convert_alpha()
+        self.ogImage = py.Surface((64, 8)).convert_alpha()
         self.image = self.ogImage.copy()
         self.image.fill('#848484')
         self.dt = None
         self.ySort = 1000
         self.properties = []
         self.character = character
-        self.rect = self.image.get_frect(center = character.onScreenPos.midtop+ vect(0,-12))
+        self.rect = self.image.get_frect(center=character.onScreenPos.midtop + vect(0, -12))
         self.onScreenPos = self.rect.copy()
-        self.healthPercent = self.character.getHealth('percent')
+        self.displayedHealth = self.character.getHealth('percent')
         self.hidden = False
         self.blank = py.Surface((64, 8), py.SRCALPHA)
         self.showHealth()
@@ -199,7 +200,7 @@ class HealthBar(py.sprite.Sprite):
     def showHealth(self):
         self.image = self.ogImage.copy()
         py.draw.rect(self.image, 'red', (2, 2, 60, 4))
-        py.draw.rect(self.image, 'green', (2, 2, 60 * self.healthPercent, 4))
+        py.draw.rect(self.image, 'green', (2, 2, 60 * self.displayedHealth, 4))
 
     def applyVisibility(self):
         if self.character.hidden:
@@ -208,26 +209,69 @@ class HealthBar(py.sprite.Sprite):
             self.showHealth()
 
     def updateScreenPos(self, offset):
-        self.onScreenPos.center = self.character.onScreenPos.midtop + vect(0,-12)
+        self.onScreenPos.center = self.character.onScreenPos.midtop + vect(0, -12)
         self.applyVisibility()
         return self.onScreenPos
 
-    def update(self,dt):
+    def update(self, dt):
         self.dt = dt
-        healthPercent = self.character.getHealth('percent')
-        if self.healthPercent != healthPercent:
-            if self.healthPercent > healthPercent and not self.healthDir:
-                self.healthDir = '-'
-            elif self.healthPercent < healthPercent and not self.healthDir:
-                self.healthDir = '+'
+        targetHealth = self.character.getHealth('percent')
+        if targetHealth > self.displayedHealth:
+            self.displayedHealth = min(targetHealth, self.displayedHealth + dt * 2)
+        elif targetHealth < self.displayedHealth:
+            self.displayedHealth = max(targetHealth, self.displayedHealth - dt * 2)
 
-            if self.healthDir == '-':
-                self.healthPercent -= dt * 2
-                if self.healthPercent <= healthPercent:
-                    self.healthPercent = healthPercent
-                    self.healthDir = ''
-            elif self.healthDir == '+':
-                self.healthPercent += dt * 2
-                if self.healthPercent >= healthPercent:
-                    self.healthPercent = healthPercent
-                    self.healthDir = ''
+        self.showHealth()
+
+
+class HUD:
+
+    def __init__(self, player):
+        self.sprites = py.sprite.Group()
+        self.dt = None
+        self.healthOutline = py.image.load(FILEPATH / 'HealthBarOutline.png').convert_alpha()
+        self.healthOutlineRect = self.healthOutline.get_frect(bottomleft=(112, 704))
+        self.portrait = py.image.load(FILEPATH / 'portrait.png').convert_alpha()
+        self.portraitRect = self.portrait.get_frect(bottomleft=(16, 704))
+        HUDHealthBar(player, self.sprites)
+
+    def update(self, dt, win):
+        self.dt = dt
+        self.sprites.update(dt)
+        self.sprites.draw(win)
+
+        win.blit(self.healthOutline, self.healthOutlineRect)
+        win.blit(self.portrait, self.portraitRect)
+
+
+class HUDHealthBar(py.sprite.Sprite):
+
+    def __init__(self, player, *groups):
+        super().__init__(*groups)
+
+        self.images = {}
+        imagePath = FILEPATH / 'HealthBars'
+
+        for file in imagePath.glob('HealthBar*.png'):
+            self.images[int(file.stem[9:])] = py.image.load(file).convert_alpha()
+
+        self.player = player
+        self.displayedHealth = 100
+
+        self.image = self.images[100]
+        self.rect = self.image.get_frect(bottomleft=(124, 692))
+
+    @staticmethod
+    def roundToNearestPercent(percent):
+        return round(round(percent / 100 * 38) / 38 * 100)
+
+    def update(self, dt):
+        self.dt = dt
+        targetHealth = self.player.getHealth('percent') * 100
+
+        if targetHealth > self.displayedHealth:
+            self.displayedHealth = min(targetHealth, self.displayedHealth + dt * 200)
+        elif targetHealth < self.displayedHealth:
+            self.displayedHealth = max(targetHealth, self.displayedHealth - dt * 200)
+
+        self.image = self.images[self.roundToNearestPercent(self.displayedHealth)]
