@@ -68,8 +68,7 @@ class Gun(py.sprite.Sprite):
         self.allSprites = allSprites
         self.character = character
         self.dt = None
-        self.image = py.Surface((32, 16)).convert_alpha()
-        self.image.fill('Brown')
+        self.image = py.image.load(imagePath / 'M16.png').convert_alpha()
         self.unrotatedImage = self.image.copy()
         self.ogImage = self.image.copy()
         self.pos = self.character.onScreenPos.center + vect(60, 0)
@@ -138,7 +137,7 @@ class Character(py.sprite.Sprite):
         self.rect: py.FRect = self.image.get_frect(center=pos)
         self.onScreenPos = self.image.get_frect(center=pos)
 
-        self.hitBox = self.rect
+        self.hitBox = self.rect.inflate(-40, -40)
 
         self.direction = vect((0, 0))
         self.walls = walls
@@ -202,6 +201,8 @@ class Character(py.sprite.Sprite):
                 self.animationCount = 0
             self.image = self.idleImages[self.facing][round(self.animationCount)]
 
+    def input(self):
+        pass
 
     def updateScreenPos(self, offset):
         self.onScreenPos.topleft = self.rect.topleft - offset
@@ -212,6 +213,9 @@ class Character(py.sprite.Sprite):
 
     def update(self, dt):
         self.dt = dt
+        if py.key.get_just_pressed()[K_k]:
+            self.health = max(0, self.health - 5)
+
         self.input()
         self.walk()
         if self.animation:

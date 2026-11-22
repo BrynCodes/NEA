@@ -199,8 +199,8 @@ class HealthBar(py.sprite.Sprite):
 
     def showHealth(self):
         self.image = self.ogImage.copy()
-        py.draw.rect(self.image, 'red', (2, 2, 60, 4))
-        py.draw.rect(self.image, 'green', (2, 2, 60 * self.displayedHealth, 4))
+        py.draw.rect(self.image, '#00000000', (2, 2, 60, 4))
+        py.draw.rect(self.image, 'red', (2, 2, 60 * self.displayedHealth, 4))
 
     def applyVisibility(self):
         if self.character.hidden:

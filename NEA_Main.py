@@ -1,3 +1,5 @@
+from pytmx import TiledTileLayer, TiledObjectGroup
+
 from NEA_Sprites import Player, Enemy
 from NEA_Tiles import CollisionTile, Tile
 from NEA_UI import *
@@ -52,24 +54,29 @@ class Group(py.sprite.Group):
 
 
 
+
 def tileMapSetup(allSprites, walls, unseeables, seeables):
     path = ASSETSPATH / 'Tilemaps'
-    map = load_pygame(path / 'room_01_winding_corridor.tmx')
+    tmx = load_pygame(path / 'room_01_winding_corridor.tmx')
+    tw, th = tmx.tilewidth, tmx.tileheight
+
     bgGroup = py.sprite.Group()
+    tiles = py.sprite.Group()
 
-    for layer in map.layers:
+    for layer in tmx.layers:
 
-        if layer.id < 3:
+        if isinstance(layer, TiledTileLayer):
+            target = bgGroup if layer.name == 'Background' else tiles
             for x, y, surface in layer.tiles():
-                Tile((x * 64, y * 64), surface, bgGroup)
-    for object in map.objects:
-        if object.properties['Seeable']:
-            Tile((object.x, object.y), py.Surface((object.width, object.height)), seeables,
-                 properties='CollisionRectangles')
-        else:
-            Tile((object.x, object.y), py.Surface((object.width, object.height)), walls,
-                 properties='CollisionRectangles')
+                Tile((x * tw, y * th), surface, target)
 
+        elif isinstance(layer, TiledObjectGroup):
+            target = seeables if layer.name == 'LineOfSight' else walls
+            for obj in layer:
+                Tile((obj.x, obj.y), py.Surface((obj.width, obj.height)), target,
+                     properties='CollisionRectangles')
+
+    allSprites.add(tiles)
     allSprites.addBg(bgGroup)
 
 
