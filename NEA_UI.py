@@ -114,21 +114,21 @@ class LineOfSight:
     @staticmethod
     def cornerCheckOrder(wall):
         wallPos = wall.onScreenPos
-        if wallPos.topleft[0] >= 640 and wallPos.topleft[1] >= 360:
+        if wallPos.topleft[0] >= CENTER[0] and wallPos.topleft[1] >= CENTER[1]:
             corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft
-        elif wallPos.topright[0] <= 640 and wallPos.topright[1] >= 360:
+        elif wallPos.topright[0] <= CENTER[0] and wallPos.topright[1] >= CENTER[1]:
             corners = wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
-        elif wallPos.bottomleft[0] >= 640 and wallPos.bottomleft[1] <= 360:
+        elif wallPos.bottomleft[0] >= CENTER[0] and wallPos.bottomleft[1] <= CENTER[1]:
             corners = wallPos.topleft, wallPos.topright, wallPos.bottomright
-        elif wallPos.bottomright[0] <= 640 and wallPos.bottomright[1] <= 360:
+        elif wallPos.bottomright[0] <= CENTER[0] and wallPos.bottomright[1] <= CENTER[1]:
             corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft
-        elif wallPos.top >= 360:
+        elif wallPos.top >= CENTER[1]:
             corners = wallPos.topleft, wallPos.bottomleft, wallPos.bottomright, wallPos.topright
-        elif wallPos.right <= 640:
+        elif wallPos.right <= CENTER[0]:
             corners = wallPos.topright, wallPos.topleft, wallPos.bottomleft, wallPos.bottomright
-        elif wallPos.bottom <= 360:
+        elif wallPos.bottom <= CENTER[1]:
             corners = wallPos.bottomleft, wallPos.topleft, wallPos.topright, wallPos.bottomright
-        elif wallPos.left >= 640:
+        elif wallPos.left >= CENTER[0]:
             corners = wallPos.topleft, wallPos.topright, wallPos.bottomright, wallPos.bottomleft
         else:
             corners = wallPos.topright, wallPos.bottomright, wallPos.bottomleft
@@ -136,14 +136,14 @@ class LineOfSight:
 
     @staticmethod
     def vectorCalulation(corner, wall):
-        pos = (640, 360)
         cornerVect = (vect(
-            corner) - pos).normalize()  # the vector from the middle of screen(Character) to the corner. Normalised
+            corner) - CENTER).normalize()  # the vector from the middle of screen(Character) to the corner. Normalised
 
         if (not wall.onScreenPos.collidepoint(vect(corner) - cornerVect)
                 or cornerVect.y == 0 or cornerVect.x == 0):  # Checks if the corner is an outer corner.
+
             cornerVect.scale_to_length(2000)
-            return cornerVect + pos
+            return cornerVect + CENTER
         return False
 
     def wallShadowCast(self, wall, corners):
