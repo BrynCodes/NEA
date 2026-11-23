@@ -88,7 +88,7 @@ def debugMapSetup(allSprites, walls, unseeables, seeables):
     wall.fill('red')
     wall2.fill('red')
 
-    CollisionTile((677, 1085), wall2, walls, seeables)
+    CollisionTile((1800, 300), wall2, walls, seeables)
     CollisionTile((813, 1380), wall, walls, seeables)
     CollisionTile((953, 1532), x, walls, unseeables)
     # CollisionTile((324, 89), wall2, walls)
@@ -106,7 +106,7 @@ def main():
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
 
-    tileMapSetup(allSprites, walls, unseeables, seeables)
+    debugMapSetup(allSprites, walls, unseeables, seeables)
 
     player = Player(walls, seeables, unseeables, allSprites)
 

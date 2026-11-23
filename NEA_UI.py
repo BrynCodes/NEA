@@ -24,7 +24,7 @@ class LineOfSight:
         if clippedLine:
             let = 0
         else:
-            let = 1500
+            let = 0
         points = (rect.topleft, rect.topright, rect.bottomleft, rect.bottomright)
         pointsRel = (vect(0, 0), vect(rect.w, 0), vect(0, rect.h), vect(rect.w, rect.h))
         between = []
@@ -170,8 +170,7 @@ class LineOfSight:
         lines = []
         for wall in self.seeables:
             corners = self.cornerCheckOrder(wall)
-            if self.onScreen(corners):
-                lines.append(self.wallShadowCast(wall, corners))
+            lines.append(self.wallShadowCast(wall, corners))
 
         self.blockUnseeables(lines)
 
