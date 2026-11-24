@@ -1,6 +1,8 @@
 from NEA_Constants import *
 
 FILEPATH = ASSETSPATH / 'HUD'
+py.font.init()
+FONT = py.font.Font(ASSETSPATH / 'arial.ttf', 10)
 
 
 class LineOfSight:
@@ -143,19 +145,23 @@ class LineOfSight:
         if (not wall.onScreenPos.collidepoint(vect(corner) - cornerVect)
                 or cornerVect.y == 0 or cornerVect.x == 0):  # Checks if the corner is an outer corner.
 
-            cornerVect.scale_to_length(10000)
+            cornerVect.scale_to_length(2000)
             return cornerVect + CENTER
         return False
 
     def findShadowScreenCorners(self, shadowPoints):
+
         screenRect = py.Rect(0,0, *SCREENSIZE)
-        print(screenRect.center)
+        newShadowPoints = []
+        screenCorners = self.pointCheck(
+            screenRect, True, *(vect(p) - vect(CENTER) for p in shadowPoints)
+        )
 
-        screenCorners = self.pointCheck(screenRect, True, *shadowPoints)
-        if shadowPoints:
-            print(screenRect.clipline(CENTER[0],shadowPoints[0][0],CENTER[1],shadowPoints[0][1]))
+        newShadowPoints.append(screenRect.clipline(CENTER, shadowPoints[0])[1])
+        newShadowPoints += reversed(screenCorners)
+        newShadowPoints.append(screenRect.clipline(CENTER, shadowPoints[1])[1])
 
-        return shadowPoints
+        return newShadowPoints
 
     def wallShadowCast(self, wall, corners):
         endOfShadowPoints = []
@@ -168,12 +174,17 @@ class LineOfSight:
                 endOfShadowPoints.insert(0, endOfShadowPoint)
                 startOfShadowPoints.append(vect(corner))
 
-        endOfShadowPoints = self.findShadowScreenCorners(endOfShadowPoints)
+        shadowCorners = self.findShadowScreenCorners(endOfShadowPoints)
 
-        allCorners += endOfShadowPoints
+        allCorners += shadowCorners
 
         if len(allCorners) > 2:
             py.draw.polygon(self.drawSurface, py.Color(0, 0, 0, 100), allCorners)  # 200
+
+            # for i, corner in enumerate(allCorners, 1):
+            #     py.draw.circle(self.drawSurface, 'white', corner, 10)
+            #     self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
+
 
         return list(zip(startOfShadowPoints, reversed(endOfShadowPoints)))
 
@@ -183,8 +194,8 @@ class LineOfSight:
         lines = []
         for wall in self.seeables:
             corners = self.cornerCheckOrder(wall)
-            if self.onScreen(corners):
-                lines.append(self.wallShadowCast(wall, corners))
+            # if self.onScreen(corners):
+            lines.append(self.wallShadowCast(wall, corners))
 
         self.blockUnseeables(lines)
 

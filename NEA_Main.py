@@ -81,8 +81,8 @@ def tileMapSetup(allSprites, walls, unseeables, seeables):
 
 
 def debugMapSetup(allSprites, walls, unseeables, seeables):
-    wall = py.Surface((64, 128), SRCALPHA)
-    wall2 = py.Surface((128, 64), SRCALPHA)
+    wall = py.Surface((64, 11), SRCALPHA)
+    wall2 = py.Surface((1, 64), SRCALPHA)
     x = py.Surface((16, 64), SRCALPHA)
     x.fill('blue')
     wall.fill('red')
@@ -106,7 +106,7 @@ def main():
     seeables = py.sprite.Group()
     unseeables = py.sprite.Group()
 
-    debugMapSetup(allSprites, walls, unseeables, seeables)
+    tileMapSetup(allSprites, walls, unseeables, seeables)
 
     player = Player(walls, seeables, unseeables, allSprites)
 
