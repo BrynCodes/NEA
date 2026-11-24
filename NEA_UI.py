@@ -2,6 +2,7 @@ from NEA_Constants import *
 
 FILEPATH = ASSETSPATH / 'HUD'
 
+
 class LineOfSight:
 
     def __init__(self, seeables, unseeables):
@@ -24,7 +25,7 @@ class LineOfSight:
         if clippedLine:
             let = 0
         else:
-            let = 0
+            let = 1500
         points = (rect.topleft, rect.topright, rect.bottomleft, rect.bottomright)
         pointsRel = (vect(0, 0), vect(rect.w, 0), vect(0, rect.h), vect(rect.w, rect.h))
         between = []
@@ -142,9 +143,19 @@ class LineOfSight:
         if (not wall.onScreenPos.collidepoint(vect(corner) - cornerVect)
                 or cornerVect.y == 0 or cornerVect.x == 0):  # Checks if the corner is an outer corner.
 
-            cornerVect.scale_to_length(2000)
+            cornerVect.scale_to_length(10000)
             return cornerVect + CENTER
         return False
+
+    def findShadowScreenCorners(self, shadowPoints):
+        screenRect = py.Rect(0,0, *SCREENSIZE)
+        print(screenRect.center)
+
+        screenCorners = self.pointCheck(screenRect, True, *shadowPoints)
+        if shadowPoints:
+            print(screenRect.clipline(CENTER[0],shadowPoints[0][0],CENTER[1],shadowPoints[0][1]))
+
+        return shadowPoints
 
     def wallShadowCast(self, wall, corners):
         endOfShadowPoints = []
@@ -156,6 +167,8 @@ class LineOfSight:
             if endOfShadowPoint:
                 endOfShadowPoints.insert(0, endOfShadowPoint)
                 startOfShadowPoints.append(vect(corner))
+
+        endOfShadowPoints = self.findShadowScreenCorners(endOfShadowPoints)
 
         allCorners += endOfShadowPoints
 
@@ -170,7 +183,8 @@ class LineOfSight:
         lines = []
         for wall in self.seeables:
             corners = self.cornerCheckOrder(wall)
-            lines.append(self.wallShadowCast(wall, corners))
+            if self.onScreen(corners):
+                lines.append(self.wallShadowCast(wall, corners))
 
         self.blockUnseeables(lines)
 
@@ -219,8 +233,6 @@ class HealthBar(py.sprite.Sprite):
             self.displayedHealth = min(targetHealth, self.displayedHealth + dt * 2)
         elif targetHealth < self.displayedHealth:
             self.displayedHealth = max(targetHealth, self.displayedHealth - dt * 2)
-
-        self.showHealth()
 
 
 class HUD:
