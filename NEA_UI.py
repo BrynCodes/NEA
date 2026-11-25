@@ -27,7 +27,7 @@ class LineOfSight:
         if clippedLine:
             let = 0
         else:
-            let = 1500
+            let = 0
         points = (rect.topleft, rect.topright, rect.bottomleft, rect.bottomright)
         pointsRel = (vect(0, 0), vect(rect.w, 0), vect(0, rect.h), vect(rect.w, rect.h))
         between = []
@@ -93,6 +93,10 @@ class LineOfSight:
             if self.onScreen((tile.onScreenPos.topleft, tile.onScreenPos.topright, tile.onScreenPos.bottomleft,
                               tile.onScreenPos.bottomright)):
                 for lines in linePairs:
+                    s0, s1 = vect(lines[0][0]), vect(lines[1][0])
+                    edge = s1 - s0
+                    playerSide = edge.cross(vect(CENTER) - s0)
+
                     vects = []
                     points = []
                     clippedPoints = []
@@ -105,8 +109,8 @@ class LineOfSight:
 
                     points += self.pointCheck(tile.onScreenPos, any(clippedPoints), *vects)
 
-                    if len(points) > 2 and vect(CENTER - line[0]).magnitude_squared() < vect(
-                            CENTER - vect(tile.onScreenPos.center)).magnitude_squared():
+                    tileSide = edge.cross(vect(tile.onScreenPos.center) - s0)
+                    if len(points) > 2 and playerSide * tileSide < 0:
                         arrangedPoints = self.arrangePoints(points.copy())
                         py.draw.polygon(tile.image, (0, 0, 0, 0), arrangedPoints)
                         cut = True

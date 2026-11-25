@@ -66,9 +66,12 @@ def tileMapSetup(allSprites, walls, unseeables, seeables):
     for layer in tmx.layers:
 
         if isinstance(layer, TiledTileLayer):
-            target = bgGroup if layer.name == 'Background' else tiles
+            groups = [bgGroup if layer.name == 'Background' else tiles]
+            if layer.name == 'Decoration':
+                groups.append(unseeables)
+
             for x, y, surface in layer.tiles():
-                Tile((x * tw, y * th), surface, target)
+                Tile((x * tw, y * th), surface, *groups)
 
         elif isinstance(layer, TiledObjectGroup):
             target = seeables if layer.name == 'LineOfSight' else walls
