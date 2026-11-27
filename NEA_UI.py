@@ -24,10 +24,7 @@ class LineOfSight:
 
     @staticmethod
     def pointCheck(rect, clippedLine, *vects):
-        if clippedLine:
-            let = 0
-        else:
-            let = 0
+        let = 0 if clippedLine else 1
         points = (rect.topleft, rect.topright, rect.bottomleft, rect.bottomright)
         pointsRel = (vect(0, 0), vect(rect.w, 0), vect(0, rect.h), vect(rect.w, rect.h))
         between = []
@@ -102,7 +99,7 @@ class LineOfSight:
                     clippedPoints = []
 
                     for line in lines:
-                        vects.append(line[1] - line[0])
+                        vects.append((line[0] - vect(CENTER)).normalize())
                         clippedPoint = self.clippedLineCalculation(tile, line)
                         clippedPoints.append(clippedPoint)
                         points += clippedPoint
@@ -114,6 +111,8 @@ class LineOfSight:
                         arrangedPoints = self.arrangePoints(points.copy())
                         py.draw.polygon(tile.image, (0, 0, 0, 0), arrangedPoints)
                         cut = True
+            else:
+                tile.hidden = True
 
             if cut:
                 tile.hidden = py.mask.from_surface(tile.image).count() == 0
@@ -143,19 +142,20 @@ class LineOfSight:
 
     @staticmethod
     def vectorCalulation(corner, wall):
-        cornerVect = (vect(
-            corner) - CENTER).normalize()  # the vector from the middle of screen(Character) to the corner. Normalised
+        cornerVect = vect(corner) - CENTER
+        dist = cornerVect.length()
+        cornerVect.normalize_ip()
 
         if (not wall.onScreenPos.collidepoint(vect(corner) - cornerVect)
                 or cornerVect.y == 0 or cornerVect.x == 0):  # Checks if the corner is an outer corner.
 
-            cornerVect.scale_to_length(2000)
+            cornerVect.scale_to_length(dist + 2000)
             return cornerVect + CENTER
         return False
 
     def findShadowScreenCorners(self, shadowPoints):
 
-        screenRect = py.Rect(0,0, *SCREENSIZE)
+        screenRect = py.Rect(0, 0, *SCREENSIZE)
         newShadowPoints = []
         screenCorners = self.pointCheck(
             screenRect, True, *(vect(p) - vect(CENTER) for p in shadowPoints)
@@ -188,7 +188,6 @@ class LineOfSight:
             # for i, corner in enumerate(allCorners, 1):
             #     py.draw.circle(self.drawSurface, 'white', corner, 10)
             #     self.drawSurface.blit(FONT.render(str(i), True, 'Black'), corner - vect(5, 5))
-
 
         return list(zip(startOfShadowPoints, reversed(endOfShadowPoints)))
 
